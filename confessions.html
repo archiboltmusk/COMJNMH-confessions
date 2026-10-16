@@ -30,6 +30,16 @@
 .confess-feed-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 44px; }
 .confess-feed-head h2 { font-family: 'Instrument Serif', serif; font-weight: 400; font-size: 32px; }
 .confess-feed-head span { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-muted); }
+.comments-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+.comments-section .comment-item { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: var(--surface2); border-radius: 10px; }
+.comments-section .comment-text { white-space: pre-wrap; font-family: 'Epilogue', sans-serif; font-size: 15px; line-height: 1.5; color: var(--text); }
+.comments-section .comment-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-dim); }
+.comments-section .comment-btn { background: none; border: none; color: var(--text-muted); font: inherit; cursor: pointer; padding: 2px 4px; }
+.comments-section .comment-btn:disabled { cursor: default; opacity: .6; }
+.comment-form { display: flex; flex-direction: column; gap: 8px; }
+.comment-form .comment-textarea { width: 100%; box-sizing: border-box; min-height: 60px; font-size: 15px; }
+.comment-form .comment-post-btn { align-self: flex-end; }
+.comment-form .comment-msg { font-size: 12px; color: var(--text-muted); min-height: 16px; margin: 0; }
 </style>
 </head>
 <body>
@@ -83,6 +93,8 @@
 <script>
 const SUPABASE_URL = 'https://btkkofaeksuyupajsigj.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_jlT-cFu5qh-P43YKF73Fvg_lMqajMiE';
+const FN = SUPABASE_URL + '/functions/v1/';
+const REPORTED_KEY = 'confess_reported';
 
 const form = document.getElementById('confess-form');
 const msg = document.getElementById('confess-msg');
@@ -93,9 +105,111 @@ const MESSAGES = {
   rejected: 'This post was not published because it breaks the rules (hate speech or harmful content).',
   moderation_unavailable: 'Could not check your post right now. Please try again later.',
   length_must_be_1_to_1000: 'Please write between 1 and 1000 characters.',
+  length_must_be_1_to_500: 'Please write between 1 and 500 characters.',
+  rate_limited: 'You are commenting too fast. Try again in a few minutes.',
 };
 
-function renderList(rows) {
+// Random id kept in this browser only. Sent to the server, which hashes it.
+function deviceId() {
+  try {
+    let id = localStorage.getItem('confess_device');
+    if (!id) { id = crypto.randomUUID(); localStorage.setItem('confess_device', id); }
+    return id;
+  } catch (e) {
+    if (!window._confessDevice) window._confessDevice = crypto.randomUUID();
+    return window._confessDevice;
+  }
+}
+
+function readReported() {
+  try { return JSON.parse(localStorage.getItem(REPORTED_KEY) || '[]'); } catch (e) { return []; }
+}
+
+function markReported(id) {
+  try {
+    const r = readReported();
+    if (!r.includes(id)) r.push(id);
+    localStorage.setItem(REPORTED_KEY, JSON.stringify(r));
+  } catch (e) {}
+}
+
+function anonHeaders() {
+  return { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY };
+}
+
+function fnHeaders() {
+  return Object.assign({ 'Content-Type': 'application/json', 'x-device-id': deviceId() }, anonHeaders());
+}
+
+function commentBlock(confessionId, comments, reported) {
+  const wrap = document.createElement('div');
+  wrap.className = 'comments-section';
+
+  comments.forEach(function (c) {
+    const item = document.createElement('div');
+    item.className = 'comment-item';
+    const text = document.createElement('p');
+    text.className = 'comment-text';
+    text.textContent = c.body;
+    const meta = document.createElement('div');
+    meta.className = 'comment-meta';
+    const when = document.createElement('span');
+    when.textContent = new Date(c.created_at).toLocaleString();
+    const report = document.createElement('button');
+    report.type = 'button';
+    report.className = 'comment-btn';
+    const done = reported.includes(c.id);
+    report.textContent = done ? 'Reported' : 'Report';
+    report.disabled = done;
+    report.onclick = function () { reportComment(c.id, report); };
+    meta.append(when, report);
+    item.append(text, meta);
+    wrap.append(item);
+  });
+
+  const cform = document.createElement('form');
+  cform.className = 'comment-form';
+  const ta = document.createElement('textarea');
+  ta.className = 'comment-textarea';
+  ta.maxLength = 500;
+  ta.required = true;
+  ta.placeholder = 'Add an anonymous comment';
+  const btn = document.createElement('button');
+  btn.type = 'submit';
+  btn.className = 'comment-post-btn btn-primary';
+  btn.textContent = 'Comment';
+  const cmsg = document.createElement('p');
+  cmsg.className = 'comment-msg';
+  cmsg.setAttribute('role', 'status');
+  cform.append(ta, btn, cmsg);
+  cform.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    btn.disabled = true;
+    cmsg.textContent = 'Checking…';
+    try {
+      const res = await fetch(FN + 'submit-comment', {
+        method: 'POST',
+        headers: fnHeaders(),
+        body: JSON.stringify({ confession_id: confessionId, body: ta.value.trim() }),
+      });
+      const data = await res.json().catch(function () { return {}; });
+      if (res.status === 201) {
+        cmsg.textContent = 'Posted.';
+        loadAll();
+      } else {
+        cmsg.textContent = MESSAGES[data.error] || 'Something went wrong. Please try again.';
+        btn.disabled = false;
+      }
+    } catch (err) {
+      cmsg.textContent = 'Network error. Please try again.';
+      btn.disabled = false;
+    }
+  });
+  wrap.append(cform);
+  return wrap;
+}
+
+function renderList(rows, commentsByConfession) {
   list.textContent = '';
   if (!rows.length) {
     const empty = document.createElement('div');
@@ -104,6 +218,7 @@ function renderList(rows) {
     list.append(empty);
     return;
   }
+  const reported = readReported();
   rows.forEach(function (row) {
     const card = document.createElement('article');
     card.className = 'idea-card';
@@ -113,21 +228,53 @@ function renderList(rows) {
     const when = document.createElement('div');
     when.className = 'idea-time';
     when.textContent = new Date(row.created_at).toLocaleString();
-    card.append(body, when);
+    card.append(body, when, commentBlock(row.id, commentsByConfession[row.id] || [], reported));
     list.append(card);
   });
 }
 
-async function loadList() {
+async function reportComment(id, button) {
+  button.disabled = true;
+  try {
+    const res = await fetch(FN + 'report-comment', {
+      method: 'POST',
+      headers: fnHeaders(),
+      body: JSON.stringify({ comment_id: id }),
+    });
+    if (!res.ok) throw new Error('report_failed');
+    markReported(id);
+    button.textContent = 'Reported';
+  } catch (e) {
+    button.disabled = false;
+    msg.textContent = 'Could not send the report. Please try again.';
+  }
+}
+
+async function loadAll() {
   try {
     const res = await fetch(
       SUPABASE_URL + '/rest/v1/confessions?select=id,body,created_at&order=created_at.desc&limit=100',
-      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY } }
+      { headers: anonHeaders() }
     );
     if (!res.ok) throw new Error('load_failed');
     const rows = await res.json();
     document.getElementById('confess-count').textContent = rows.length + ' posted';
-    renderList(rows);
+
+    // Comments are optional: if they fail to load, confessions still show.
+    const byConfession = {};
+    try {
+      const cres = await fetch(
+        SUPABASE_URL + '/rest/v1/confession_comments?select=id,confession_id,body,created_at&order=created_at.asc&limit=1000',
+        { headers: anonHeaders() }
+      );
+      if (cres.ok) {
+        (await cres.json()).forEach(function (c) {
+          (byConfession[c.confession_id] = byConfession[c.confession_id] || []).push(c);
+        });
+      }
+    } catch (e) {}
+
+    renderList(rows, byConfession);
   } catch (e) {
     msg.textContent = 'Could not load confessions. Please refresh.';
   }
@@ -139,16 +286,16 @@ form.addEventListener('submit', async function (e) {
   submitBtn.disabled = true;
   msg.textContent = 'Checking…';
   try {
-    const res = await fetch(SUPABASE_URL + '/functions/v1/submit-confession', {
+    const res = await fetch(FN + 'submit-confession', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+      headers: Object.assign({ 'Content-Type': 'application/json' }, anonHeaders()),
       body: JSON.stringify({ body: body }),
     });
     const data = await res.json().catch(function () { return {}; });
     if (res.status === 201) {
       msg.textContent = 'Published.';
       form.reset();
-      loadList();
+      loadAll();
     } else {
       msg.textContent = MESSAGES[data.error] || 'Something went wrong. Please try again.';
     }
@@ -159,7 +306,7 @@ form.addEventListener('submit', async function (e) {
   }
 });
 
-loadList();
+loadAll();
 </script>
 </body>
 </html>
