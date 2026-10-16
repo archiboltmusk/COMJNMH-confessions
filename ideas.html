@@ -12,7 +12,7 @@
 <meta property="og:image" content="/og-image.png">
 
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Epilogue:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="styles.css">
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
 <script>
@@ -30,7 +30,7 @@
 <body>
 
 <header class="site-header">
-  <a href="/" class="logo">
+  <a href="./" class="logo">
     <div class="logo-mark">M+</div>
     <div>
       <div class="logo-text">MedReform</div>
@@ -38,11 +38,11 @@
     </div>
   </a>
   <nav class="desktop-nav">
-    <a href="/" class="nav-link">Confessions</a>
-    <a href="/ideas" class="nav-link active">Ideas</a>
-    <a href="/submit" class="nav-link">Submit</a>
-    <a href="/snakes" class="nav-link">Snakes</a>
-    <a href="/donors" class="nav-link">Blood</a>
+    <a href="./" class="nav-link">Confessions</a>
+    <a href="ideas" class="nav-link active">Ideas</a>
+    <a href="submit" class="nav-link">Submit</a>
+    <a href="snakes" class="nav-link">Snakes</a>
+    <a href="donors" class="nav-link">Blood</a>
   </nav>
   <span class="badge live">Ideas</span>
 </header>
@@ -50,7 +50,7 @@
 <div class="ideas-wrap">
   <div class="ideas-header">
     <h1 id="ideas-count">Ideas (0)</h1>
-    <a href="/submit" class="fab" title="Submit idea">✎</a>
+    <a href="submit" class="fab" title="Submit idea">✎</a>
   </div>
 
   <input type="text" class="search-box" id="search-input" placeholder="Search ideas by title, description, or author...">
@@ -100,11 +100,11 @@
 </div>
 
 <nav class="mobile-nav">
-  <a href="/" class="mob-tab"><span class="mob-icon">⌂</span><span>Confessions</span></a>
-  <a href="/ideas" class="mob-tab active"><span class="mob-icon">≡</span><span>Ideas</span></a>
-  <a href="/submit" class="mob-tab"><span class="mob-icon">✎</span><span>Submit</span></a>
-  <a href="/snakes" class="mob-tab"><span class="mob-icon">🐍</span><span>Snakes</span></a>
-  <a href="/donors" class="mob-tab"><span class="mob-icon">🩸</span><span>Blood</span></a>
+  <a href="./" class="mob-tab"><span class="mob-icon">⌂</span><span>Confessions</span></a>
+  <a href="ideas" class="mob-tab active"><span class="mob-icon">≡</span><span>Ideas</span></a>
+  <a href="submit" class="mob-tab"><span class="mob-icon">✎</span><span>Submit</span></a>
+  <a href="snakes" class="mob-tab"><span class="mob-icon">🐍</span><span>Snakes</span></a>
+  <a href="donors" class="mob-tab"><span class="mob-icon">🩸</span><span>Blood</span></a>
 </nav>
 
 <div class="toast" id="toast">
@@ -114,7 +114,7 @@
 
 <div id="sr-live-region" aria-live="polite" aria-atomic="true" style="position: absolute; left: -9999px;"></div>
 
-<script src="/data.js"></script>
+<script src="data.js"></script>
 <script>
 var ideas = [];
 var voted = new Set();
