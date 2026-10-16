@@ -11,6 +11,9 @@
   var COOLDOWN_MS = 10 * 60 * 1000;          // per device only; anonymous posts have no account to limit
   var COOLDOWN_KEY = 'medreform_snake_last_sent';
   var PHOTO_PREFIX = 'data:image/jpeg;base64,';
+  // Map: OpenStreetMap tiles, and OSM building footprints for this box (town centre and JNM campus).
+  var MAP_BOX = { s: 22.955, w: 88.425, n: 23.000, e: 88.475 };
+  var OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) {
@@ -145,6 +148,58 @@
     }
   }
 
+  // Map: dark styling comes from snakes.html (CSS filter on the OSM tiles). Pins = sightings from load().
+  var map = null, buildingLayer = null, pinLayer = null, pinColor = '#e0a84f';
+
+  function initMap() {
+    var box = $('sn-map');
+    if (!box) return;
+    if (!window.L) {
+      $('sn-map-status').textContent = 'The map could not load. Check your connection and refresh.';
+      return;
+    }
+    var css = getComputedStyle(document.documentElement);
+    var accent = css.getPropertyValue('--accent').trim() || '#e0a84f';
+    var dim = css.getPropertyValue('--text-dim').trim() || '#888';
+
+    map = L.map(box, { scrollWheelZoom: false }).setView([AREA.lat, AREA.lng], 15);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    buildingLayer = L.layerGroup().addTo(map);
+    pinLayer = L.layerGroup().addTo(map);
+    pinColor = accent;
+
+    var q = '[out:json][timeout:25];way["building"](' + MAP_BOX.s + ',' + MAP_BOX.w + ',' + MAP_BOX.n + ',' + MAP_BOX.e + ');out geom;';
+    fetch(OVERPASS_URL + '?data=' + encodeURIComponent(q))
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (j) {
+        var n = 0;
+        (j.elements || []).forEach(function (w) {
+          if (!w.geometry || w.geometry.length < 3) return;
+          var ring = w.geometry.map(function (p) { return [p.lat, p.lon]; });
+          L.polygon(ring, { color: dim, weight: 0.6, fillColor: dim, fillOpacity: 0.45, interactive: false }).addTo(buildingLayer);
+          n++;
+        });
+        $('sn-map-status').textContent = n + ' buildings from OpenStreetMap. Pins are sightings from the last 48 hours.';
+      })
+      .catch(function () {
+        $('sn-map-status').textContent = 'Buildings could not load from OpenStreetMap right now. Sightings still show as pins.';
+      });
+  }
+
+  function drawPins(pins) {
+    if (!pinLayer) return;
+    pinLayer.clearLayers();
+    pins.forEach(function (p) {
+      L.circleMarker([p.lat, p.lng], {
+        radius: 7, color: '#fff', weight: 2, fillColor: pinColor, fillOpacity: 1
+      }).bindPopup('<strong>Snake</strong><br>' + esc(ago(p.t)) + (p.note ? '<br>' + esc(p.note) : ''))
+        .addTo(pinLayer);
+    });
+  }
+
   async function load() {
     var s = store(), box = $('sn-list');
     if (!s) {
@@ -155,15 +210,17 @@
     try {
       var snap = await s.collection('snake_sightings')
         .where('expireAt', '>', new Date()).orderBy('expireAt', 'desc').limit(50).get();
-      var html = [];
+      var html = [], pins = [];
       snap.forEach(function (d) {
         var r = d.data();
         if (!r.photo || r.photo.indexOf(PHOTO_PREFIX) !== 0) return;
         var t = r.createdAt && r.createdAt.toMillis ? r.createdAt.toMillis() : Date.now();
+        if (typeof r.lat === 'number' && typeof r.lng === 'number') pins.push({ lat: r.lat, lng: r.lng, t: t, note: r.note });
         html.push('<article class="sn-item"><img src="' + esc(r.photo) + '" alt="Snake photo from ' + esc(AREA.name) + '" loading="lazy">' +
           '<div><div class="sn-when">' + esc(ago(t)) + ' · ' + esc(AREA.name) + '</div>' +
           (r.note ? '<p>' + esc(r.note) + '</p>' : '') + '</div></article>');
       });
+      drawPins(pins);
       box.innerHTML = html.length ? html.join('') :
         '<p class="sn-empty">No snake reported in ' + esc(AREA.name) + ' in the last 48 hours.</p>';
       $('sn-count').textContent = html.length ? '(' + html.length + ')' : '';
@@ -193,5 +250,6 @@
   $('sn-send').addEventListener('click', send);
   window.addEventListener('pagehide', stopCamera);
 
+  initMap();
   load();
 })();
