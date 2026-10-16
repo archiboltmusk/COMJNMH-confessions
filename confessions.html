@@ -13,6 +13,24 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Epilogue:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
+<style>
+.confess-hero { padding: 8px 0 28px; }
+.confess-hero h1 { font-size: clamp(44px, 7vw, 72px); line-height: 1.02; margin-bottom: 14px; }
+.confess-hero h1 em { color: var(--accent); font-style: italic; }
+.confess-hero p { color: var(--text-muted); font-size: 16px; line-height: 1.6; max-width: 560px; }
+.confess-hero .hero-note { margin-top: 18px; display: inline-flex; align-items: center; gap: 8px; font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: .04em; color: var(--accent); }
+.confess-hero .hero-note::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+.confess-card-form { padding: 28px; }
+.confess-card-form .form-textarea { min-height: 140px; font-size: 16px; }
+.confess-card-form .btn-primary { width: 100%; padding: 14px; font-size: 15px; }
+.confess-feed { display: flex; flex-direction: column; gap: 14px; margin-top: 36px; }
+.confess-feed .idea-card { display: block; width: 100%; padding: 22px 24px; }
+.confess-feed .confess-text { white-space: pre-wrap; font-family: 'Epilogue', sans-serif; font-size: 17px; line-height: 1.65; color: var(--text); margin: 0 0 12px; max-width: none; }
+.confess-feed .idea-time { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-dim); letter-spacing: .03em; }
+.confess-feed-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 44px; }
+.confess-feed-head h2 { font-family: 'Instrument Serif', serif; font-weight: 400; font-size: 32px; }
+.confess-feed-head span { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-muted); }
+</style>
 </head>
 <body>
 
@@ -34,12 +52,13 @@
 </header>
 
 <div class="submit-wrap">
-  <div class="submit-header">
-    <h1>Confessions</h1>
-    <p>Anonymous. Every post is checked automatically for hate speech and harmful content before it appears. Nothing is reviewed by hand.</p>
-  </div>
+  <section class="confess-hero">
+    <h1>Say it <em>anonymously.</em></h1>
+    <p>Share what you can't say out loud at COMJNMH. Nobody signs in and nothing identifies you. Every post is checked automatically for hate speech and harmful content before it appears. Nothing is reviewed by hand.</p>
+    <div class="hero-note">LIVE · NEWEST FIRST</div>
+  </section>
 
-  <form class="form-card" id="confess-form">
+  <form class="form-card confess-card-form" id="confess-form">
     <div class="form-group">
       <label class="form-label" for="confess-body">Your confession</label>
       <textarea class="form-textarea" id="confess-body" name="body" rows="5" maxlength="1000" required></textarea>
@@ -50,7 +69,8 @@
     </div>
   </form>
 
-  <div class="ideas-list" id="confess-list" aria-live="polite"></div>
+  <div class="confess-feed-head"><h2>Latest</h2><span id="confess-count"></span></div>
+  <div class="confess-feed" id="confess-list" aria-live="polite"></div>
 </div>
 
 <nav class="mobile-nav">
@@ -88,7 +108,7 @@ function renderList(rows) {
     const card = document.createElement('article');
     card.className = 'idea-card';
     const body = document.createElement('p');
-    body.className = 'idea-text';
+    body.className = 'confess-text';
     body.textContent = row.body;
     const when = document.createElement('div');
     when.className = 'idea-time';
@@ -105,7 +125,9 @@ async function loadList() {
       { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY } }
     );
     if (!res.ok) throw new Error('load_failed');
-    renderList(await res.json());
+    const rows = await res.json();
+    document.getElementById('confess-count').textContent = rows.length + ' posted';
+    renderList(rows);
   } catch (e) {
     msg.textContent = 'Could not load confessions. Please refresh.';
   }
