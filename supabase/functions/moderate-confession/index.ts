@@ -1,4 +1,4 @@
-// Moderator login, list and delete for confessions.
+// Moderator login, list and delete for confessions and their comments.
 // Requires secret MODERATOR_PASSPHRASE (Supabase edge function secrets).
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected by Supabase.
 // Tokens are "<expiry-ms>.<hmac-hex>", signed with the passphrase, valid 8 hours.
@@ -93,6 +93,28 @@ Deno.serve(async (req) => {
       return json(400, { error: "bad_id" });
     }
     const r = await fetch(`${url}/rest/v1/confessions?id=eq.${id}`, {
+      method: "DELETE",
+      headers: { ...headers, Prefer: "return=minimal" },
+    });
+    if (!r.ok) return json(500, { error: "delete_failed" });
+    return json(200, { status: "deleted" });
+  }
+
+  if (payload?.action === "comments") {
+    const r = await fetch(
+      `${url}/rest/v1/confession_comments?select=id,confession_id,body,created_at,report_count,hidden,instagram&order=created_at.desc&limit=500`,
+      { headers },
+    );
+    if (!r.ok) return json(500, { error: "list_failed" });
+    return json(200, { comments: await r.json() });
+  }
+
+  if (payload?.action === "delete_comment") {
+    const id = payload?.id;
+    if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) {
+      return json(400, { error: "bad_id" });
+    }
+    const r = await fetch(`${url}/rest/v1/confession_comments?id=eq.${id}`, {
       method: "DELETE",
       headers: { ...headers, Prefer: "return=minimal" },
     });
