@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Snakes at JNM Hospital — MedReform</title>
-<meta name="description" content="Saw a snake at JNM Hospital, Kalyani? Send one live photo from where you stand. Sightings show for 48 hours; nobody sees who sent them. First aid for snakebite.">
+<meta name="description" content="Saw a snake at JNM Hospital, Kalyani? Send one live photo from your phone where you stand. Sightings show for 48 hours; nobody sees who sent them. First aid for snakebite.">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Epilogue:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -29,7 +29,8 @@
   .sn-item { display: grid; grid-template-columns: 96px 1fr; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
   .sn-item img { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; }
   .sn-item p { margin-top: 6px; color: var(--text-muted); line-height: 1.5; font-size: 14px; }
-  .sn-item .sn-taken { margin-top: 10px; font-size: 12px; padding: 7px 12px; }
+  .sn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .sn-row .sn-btn { font-size: 12px; padding: 7px 12px; }
   .sn-when { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-dim); letter-spacing: 0.04em; text-transform: uppercase; }
   .sn-empty { padding: 24px 0; color: var(--text-dim); font-family: 'DM Mono', monospace; font-size: 12px; }
   .sn-map { height: 420px; margin-top: 12px; border-radius: 14px; border: 1px solid var(--border); overflow: hidden; background: var(--surface); }
@@ -66,11 +67,11 @@
 
 <main class="sn-wrap">
   <h1>Snakes at <em>JNM Hospital</em></h1>
-  <p class="sn-lede">Saw a snake on the JNM Hospital campus? Stand back, take one photo from where you are, and send it. Everyone at the hospital sees it for 48 hours. Nobody sees who sent it.</p>
+  <p class="sn-lede">Saw a snake on the JNM Hospital campus? Stand back, take one photo from your phone where you are, and send it. Everyone at the hospital sees it for 48 hours. Nobody sees who sent it.</p>
 
   <section class="sn-box" aria-labelledby="sn-send-h">
     <h2 id="sn-send-h">Send a sighting</h2>
-    <p class="sn-small">The photo must be taken now, with the camera; no gallery uploads. Your location is stored rounded to about 100 m, not your exact point, and only counts inside the campus.</p>
+    <p class="sn-small">Phone camera only: the photo must be taken now, live. No gallery, no uploads, no computer. Photos with a face are refused where the browser can check. Your location is stored rounded to about 100 m, not your exact point, and only counts inside the campus.</p>
     <label class="sn-check"><input type="checkbox" id="sn-auto" checked> Capture my location when I take the photo</label>
     <button type="button" class="sn-btn" id="sn-cam">Open camera</button>
     <video id="sn-video" playsinline muted hidden></video>
@@ -86,6 +87,7 @@
   <section class="sn-section" aria-labelledby="sn-list-h">
     <h2 id="sn-list-h">Seen in the last 48 hours <span id="sn-count"></span></h2>
     <p class="sn-small" id="sn-updated">Loading…</p>
+    <p class="sn-small">Tap Report if a photo is a joke, shows a person, or is not a snake. Three reports hide a sighting.</p>
     <div id="sn-list" class="sn-cards"></div>
   </section>
 
