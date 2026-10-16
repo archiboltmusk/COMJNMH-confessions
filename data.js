@@ -285,8 +285,8 @@ function statusLabel(status) {
 }
 
 function statusColorBg(status) {
-  const colors = { submitted: 'rgba(251,191,36,0.12)', reviewed: 'rgba(96,165,250,0.12)', implemented: 'rgba(74,222,128,0.12)', rejected: 'rgba(248,113,113,0.12)' };
-  return colors[status] || 'rgba(122,148,133,0.12)';
+  const colors = { submitted: 'rgba(251,191,36,0.12)', reviewed: 'rgba(96,165,250,0.12)', implemented: 'rgba(237,119,171,0.12)', rejected: 'rgba(248,113,113,0.12)' };
+  return colors[status] || 'rgba(95,99,104,0.12)';
 }
 
 function statusColor(status) {
