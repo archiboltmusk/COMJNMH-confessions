@@ -634,3 +634,9 @@ body::after {
   .form-row { grid-template-columns: 1fr; }
   .header-btns .btn-export { display: none; }
 }
+
+/* Site footer: Instagram link on every page */
+.site-footer { text-align: center; padding: 28px 16px 28px; font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: .03em; }
+.site-footer a { color: var(--accent); text-decoration: none; }
+.site-footer a:hover { text-decoration: underline; }
+@media (max-width: 700px) { .site-footer { padding-bottom: calc(var(--mob-nav-h) + 24px); } }
