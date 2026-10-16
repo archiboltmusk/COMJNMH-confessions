@@ -1,25 +1,64 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Confessions</title>
-<link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confessions — MedReform</title>
+<meta name="description" content="Anonymous confessions from COMJNMH. Automatically checked for hate speech and harmful content.">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Confessions — MedReform">
+<meta property="og:description" content="Anonymous confessions from COMJNMH, checked automatically.">
+<meta property="og:image" content="/og-image.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Epilogue:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-<main class="container" style="max-width:720px;margin:0 auto;padding:16px">
-  <h1>Confessions</h1>
-  <p>Anonymous. Posts are checked automatically for hate speech and harmful content before they appear. Nothing is reviewed by hand.</p>
 
-  <form id="confess-form">
-    <label for="confess-body">Your confession (max 1000 characters)</label>
-    <textarea id="confess-body" name="body" rows="5" maxlength="1000" required style="width:100%;box-sizing:border-box"></textarea>
-    <button type="submit" id="confess-submit">Submit</button>
-    <p id="confess-msg" role="status"></p>
+<header class="site-header">
+  <a href="/" class="logo">
+    <div class="logo-mark">M+</div>
+    <div>
+      <div class="logo-text">MedReform</div>
+      <div class="logo-sub">COMJNMH · Kalyani</div>
+    </div>
+  </a>
+  <nav class="desktop-nav">
+    <a href="/" class="nav-link active">Confessions</a>
+    <a href="/ideas" class="nav-link">Ideas</a>
+    <a href="/submit" class="nav-link">Submit</a>
+    <a href="/snakes" class="nav-link">Snakes</a>
+  </nav>
+  <span class="badge live">Anonymous</span>
+</header>
+
+<div class="submit-wrap">
+  <div class="submit-header">
+    <h1>Confessions</h1>
+    <p>Anonymous. Every post is checked automatically for hate speech and harmful content before it appears. Nothing is reviewed by hand.</p>
+  </div>
+
+  <form class="form-card" id="confess-form">
+    <div class="form-group">
+      <label class="form-label" for="confess-body">Your confession</label>
+      <textarea class="form-textarea" id="confess-body" name="body" rows="5" maxlength="1000" required></textarea>
+    </div>
+    <div class="form-group">
+      <button type="submit" class="btn-primary" id="confess-submit">Submit anonymously</button>
+      <p id="confess-msg" role="status"></p>
+    </div>
   </form>
 
-  <section id="confess-list" aria-live="polite"></section>
-</main>
+  <div class="ideas-list" id="confess-list" aria-live="polite"></div>
+</div>
+
+<nav class="mobile-nav">
+  <a href="/" class="mob-tab active"><span class="mob-icon">⌂</span><span>Confessions</span></a>
+  <a href="/ideas" class="mob-tab"><span class="mob-icon">≡</span><span>Ideas</span></a>
+  <a href="/submit" class="mob-tab"><span class="mob-icon">✎</span><span>Submit</span></a>
+  <a href="/snakes" class="mob-tab"><span class="mob-icon">🐍</span><span>Snakes</span></a>
+</nav>
 
 <script>
 const SUPABASE_URL = 'https://btkkofaeksuyupajsigj.supabase.co';
@@ -38,12 +77,21 @@ const MESSAGES = {
 
 function renderList(rows) {
   list.textContent = '';
+  if (!rows.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.textContent = 'No confessions yet.';
+    list.append(empty);
+    return;
+  }
   rows.forEach(function (row) {
     const card = document.createElement('article');
-    card.style.cssText = 'border-top:1px solid var(--border, #ddd);padding:12px 0';
+    card.className = 'idea-card';
     const body = document.createElement('p');
+    body.className = 'idea-text';
     body.textContent = row.body;
-    const when = document.createElement('small');
+    const when = document.createElement('div');
+    when.className = 'idea-time';
     when.textContent = new Date(row.created_at).toLocaleString();
     card.append(body, when);
     list.append(card);
