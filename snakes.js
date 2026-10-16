@@ -1,5 +1,5 @@
-/* Snake sightings for Kalyani. A live camera photo and GPS go in; the last 48 hours come out, as pins on the map and cards below.
-   No sign-in, and the sender is not stored. Data: Supabase table snake_sightings (supabase/migrations/20261016170000_snake_sightings.sql). */
+/* Snake sightings for JNM Hospital, Kalyani. A live camera photo and GPS go in; the last 48 hours come out, as pins on the map and cards below.
+   No sign-in, and the sender is not stored. Data: Supabase table snake_sightings (supabase/migrations/20261016170000_snake_sightings.sql, 20261016180000_snake_taken_away.sql). */
 (function () {
   'use strict';
 
@@ -7,15 +7,16 @@
   var SUPABASE_URL = 'https://btkkofaeksuyupajsigj.supabase.co';
   var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ0a2tvZmFla3N1eXVwYWpzaWdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxMzk5ODYsImV4cCI6MjEwNzcxNTk4Nn0.qLCtq3fqid-WQcYp6AMAVH_AxT7w6PJeXIJ4XFUgG34';
 
-  // Kalyani only. Centre of Kalyani town, Nadia; the radius is approximate, confirm before launch.
-  var AREA = { name: 'Kalyani', lat: 22.9753, lng: 88.4433, radius_km: 8 };
+  // JNM Hospital campus, Kalyani (College of Medicine & JNM Hospital; point from Wikipedia, rounded). Radius is approximate, confirm before launch.
+  var AREA = { name: 'JNM Hospital', lat: 22.9744, lng: 88.4557, radius_km: 0.8 };
   var MAX_ACCURACY_M = 100;
+  var AUTO_FIX_MS = 3 * 60 * 1000;          // a location taken when the photo is shot is reused for this long
   var MAX_NOTE = 140;
   var COOLDOWN_MS = 10 * 60 * 1000;          // per device only; anonymous posts have no account to limit
   var COOLDOWN_KEY = 'medreform_snake_last_sent';
   var PHOTO_PREFIX = 'data:image/jpeg;base64,';
-  // Map: OpenStreetMap tiles, and OSM building footprints for this box (town centre and JNM campus).
-  var MAP_BOX = { s: 22.955, w: 88.425, n: 23.000, e: 88.475 };
+  // Map: OpenStreetMap building footprints for the campus box.
+  var MAP_BOX = { s: 22.965, w: 88.445, n: 22.985, e: 88.47 };
   var OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 
   var $ = function (id) { return document.getElementById(id); };
@@ -59,6 +60,7 @@
 
   var stream = null;
   var shot = null;
+  var autoFix = null;   // { p: promise of coords, at: ms } taken when the photo was shot
 
   function stopCamera() {
     if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
@@ -67,6 +69,7 @@
 
   function reset() {
     shot = null;
+    autoFix = null;
     stopCamera();
     $('sn-video').hidden = true;
     $('sn-shoot').hidden = true;
@@ -75,6 +78,7 @@
     $('sn-note').hidden = true;
     $('sn-send').hidden = true;
     $('sn-note').value = '';
+    $('sn-fix').textContent = '';
     $('sn-cam').hidden = false;
   }
 
@@ -116,6 +120,25 @@
     });
   }
 
+  // Auto capture: start the location lookup as soon as the photo is taken.
+  function startAutoFix() {
+    var p = locate();
+    p.catch(function () {});
+    autoFix = { p: p, at: Date.now() };
+    $('sn-fix').textContent = 'Finding your location…';
+    p.then(function (c) {
+      $('sn-fix').textContent = 'Location found, about ' + Math.round(c.accuracy) + ' m. It is sent with the photo.';
+    }, function (e) {
+      autoFix = null;
+      $('sn-fix').textContent = e.message + ' It will be asked again when you send.';
+    });
+  }
+
+  function getFix() {
+    if (autoFix && Date.now() - autoFix.at < AUTO_FIX_MS) return autoFix.p;
+    return locate();
+  }
+
   async function send() {
     var note = $('sn-note').value.trim().replace(/\s+/g, ' ');
     if (note.length > MAX_NOTE) return say('Keep the note to ' + MAX_NOTE + ' characters.', true);
@@ -129,11 +152,11 @@
     $('sn-send').disabled = true;
     say('Getting a precise location…');
     try {
-      var c = await locate();
+      var c = await getFix();
       if (c.accuracy > MAX_ACCURACY_M) {
         throw new Error('Your location is not precise enough yet (' + Math.round(c.accuracy) + ' m). Wait outdoors a moment and try again.');
       }
-      if (!inArea(c.latitude, c.longitude)) throw new Error('Snake sightings are for ' + AREA.name + ' only.');
+      if (!inArea(c.latitude, c.longitude)) throw new Error('Snake sightings are only for ' + AREA.name + '.');
       say('Sending…');
       var res = await sb.from('snake_sightings').insert({
         photo: shot,
@@ -145,13 +168,27 @@
       if (res.error) throw new Error('Could not send. Try again in a moment.');
       try { localStorage.setItem(COOLDOWN_KEY, String(Date.now())); } catch (e) {}
       reset();
-      say('Sent. Everyone in ' + AREA.name + ' can see it for 48 hours. Nobody sees who sent it.');
+      say('Sent. Everyone at ' + AREA.name + ' can see it for 48 hours. Nobody sees who sent it.');
       load();
     } catch (e) {
       say(e.message || 'Could not send. Try again.', true);
     } finally {
       $('sn-send').disabled = false;
     }
+  }
+
+  // Someone saw the snake removed: hide it from the list and map.
+  async function takenAway(btn) {
+    var sb = store();
+    if (!sb) return;
+    btn.disabled = true;
+    var res = await sb.rpc('snake_mark_taken', { p_id: Number(btn.getAttribute('data-id')) });
+    if (res.error) {
+      btn.disabled = false;
+      return say('Could not mark it. Try again.', true);
+    }
+    say('Marked as taken away. It is hidden from the list and the map.');
+    load();
   }
 
   // Map: dark styling comes from snakes.html (CSS filter on the OSM tiles). Pins = sightings from load().
@@ -168,7 +205,7 @@
     var accent = css.getPropertyValue('--accent').trim() || '#e0a84f';
     var dim = css.getPropertyValue('--text-dim').trim() || '#888';
 
-    map = L.map(box, { scrollWheelZoom: false }).setView([AREA.lat, AREA.lng], 15);
+    map = L.map(box, { scrollWheelZoom: false }).setView([AREA.lat, AREA.lng], 16);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
@@ -215,8 +252,9 @@
     }
     try {
       var res = await sb.from('snake_sightings')
-        .select('photo, note, lat, lng, created_at')
+        .select('id, photo, note, lat, lng, created_at')
         .gt('expires_at', new Date().toISOString())
+        .is('taken_away_at', null)
         .order('created_at', { ascending: false })
         .limit(50);
       if (res.error) throw res.error;
@@ -227,11 +265,12 @@
         if (typeof r.lat === 'number' && typeof r.lng === 'number') pins.push({ lat: r.lat, lng: r.lng, t: t, note: r.note });
         html.push('<article class="sn-item"><img src="' + esc(r.photo) + '" alt="Snake photo from ' + esc(AREA.name) + '" loading="lazy">' +
           '<div><div class="sn-when">' + esc(ago(t)) + ' · ' + esc(AREA.name) + '</div>' +
-          (r.note ? '<p>' + esc(r.note) + '</p>' : '') + '</div></article>');
+          (r.note ? '<p>' + esc(r.note) + '</p>' : '') +
+          '<button type="button" class="sn-btn ghost sn-taken" data-id="' + esc(r.id) + '">Snake taken away</button></div></article>');
       });
       drawPins(pins);
       box.innerHTML = html.length ? html.join('') :
-        '<p class="sn-empty">No snake reported in ' + esc(AREA.name) + ' in the last 48 hours.</p>';
+        '<p class="sn-empty">No snake reported at ' + esc(AREA.name) + ' in the last 48 hours.</p>';
       $('sn-count').textContent = html.length ? '(' + html.length + ')' : '';
       $('sn-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
     } catch (e) {
@@ -253,10 +292,15 @@
     $('sn-retake').hidden = false;
     $('sn-note').hidden = false;
     $('sn-send').hidden = false;
+    if ($('sn-auto').checked) startAutoFix();
     say('Add a note if you like, then send.');
   });
   $('sn-retake').addEventListener('click', function () { reset(); startCamera(); });
   $('sn-send').addEventListener('click', send);
+  $('sn-list').addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.sn-taken') : null;
+    if (btn) takenAway(btn);
+  });
   window.addEventListener('pagehide', stopCamera);
 
   initMap();
