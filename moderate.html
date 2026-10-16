@@ -21,22 +21,36 @@
   <span class="badge live">Moderation</span>
 </header>
 
-<div class="admin-screen active" style="display:block;padding:24px 16px;">
+<!-- Sign in -->
+<div class="login-screen" id="login-screen">
+  <form class="login-card" id="login-form">
+    <div class="login-logo">
+      <div class="logo-mark">M+</div>
+      <div>
+        <div class="logo-text">MedReform</div>
+        <div class="logo-sub">Moderator sign-in</div>
+      </div>
+    </div>
+    <h1>Sign In</h1>
+    <p>Moderators only. Session ends after 8 hours or when you sign out.</p>
+    <input type="password" id="passphrase" class="login-input" placeholder="Moderator passphrase"
+           autocomplete="current-password" required>
+    <button class="login-btn" id="login-btn" type="submit">Sign In</button>
+    <div class="login-error" id="login-error" role="alert"></div>
+  </form>
+</div>
+
+<!-- Moderation -->
+<div class="admin-screen" id="mod-screen" style="display:none;padding:24px 16px;">
   <div class="admin-shell">
     <div class="admin-header">
       <h1>Confessions</h1>
       <span class="session-badge" id="count">—</span>
       <div class="header-btns">
         <button class="btn-export" id="reload" type="button">Reload</button>
+        <button class="btn-logout" id="logout" type="button">Sign out</button>
       </div>
     </div>
-
-    <form id="pass-form" class="login-card" style="max-width:420px;margin:0 0 20px;">
-      <input type="password" id="passphrase" class="login-input" placeholder="Moderator passphrase"
-             autocomplete="off" required>
-      <button class="login-btn" type="submit">Load confessions</button>
-      <div class="login-error" id="error" role="alert"></div>
-    </form>
 
     <div class="idea-list" id="list"></div>
     <div class="empty-state" id="empty" style="display:none;">
@@ -49,16 +63,25 @@
 <div class="toast" id="toast"><span class="toast-icon">✓</span><span class="toast-text"></span></div>
 
 <script>
-// Passphrase lives in memory only: gone on reload, never written to storage.
 var ENDPOINT = 'https://btkkofaeksuyupajsigj.supabase.co/functions/v1/moderate-confession';
-var passphrase = '';
+var STORE_KEY = 'moderator_session';
 
 function $(id) { return document.getElementById(id); }
 
-function showError(msg) {
-  var el = $('error');
-  el.textContent = msg || '';
-  el.style.display = msg ? 'block' : 'none';
+// sessionStorage can throw (privacy modes, blocked storage): always wrap.
+function readSession() {
+  try {
+    var s = JSON.parse(sessionStorage.getItem(STORE_KEY) || 'null');
+    if (s && s.token && s.expires_at > Date.now()) return s;
+  } catch (e) {}
+  clearSession();
+  return null;
+}
+function saveSession(s) {
+  try { sessionStorage.setItem(STORE_KEY, JSON.stringify(s)); } catch (e) {}
+}
+function clearSession() {
+  try { sessionStorage.removeItem(STORE_KEY); } catch (e) {}
 }
 
 function toast(msg) {
@@ -69,13 +92,18 @@ function toast(msg) {
 }
 
 function call(body) {
+  var s = readSession();
+  var payload = Object.assign({ token: s ? s.token : undefined }, body);
   return fetch(ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(Object.assign({ passphrase: passphrase }, body))
+    body: JSON.stringify(payload)
   }).then(function (r) {
     return r.json().catch(function () { return {}; }).then(function (data) {
-      if (!r.ok) throw new Error(data.error || 'request_failed');
+      if (!r.ok) {
+        var err = new Error(data.error || 'request_failed');
+        throw err;
+      }
       return data;
     });
   });
@@ -83,8 +111,25 @@ function call(body) {
 
 function errorText(code) {
   if (code === 'unauthorized') return 'Wrong passphrase.';
+  if (code === 'session_expired') return 'Session ended. Sign in again.';
   if (code === 'not_configured') return 'Moderation is not switched on yet.';
   return 'Could not reach the server. Try again.';
+}
+
+function showSignIn(msg) {
+  clearSession();
+  $('mod-screen').style.display = 'none';
+  $('login-screen').style.display = 'flex';
+  $('login-error').textContent = msg || '';
+  $('login-error').style.display = msg ? 'block' : 'none';
+  $('passphrase').value = '';
+  $('passphrase').focus();
+}
+
+function showModeration() {
+  $('login-screen').style.display = 'none';
+  $('mod-screen').style.display = 'block';
+  load();
 }
 
 function render(rows) {
@@ -97,13 +142,13 @@ function render(rows) {
     row.className = 'idea-row';
     row.id = 'row-' + c.id;
 
-    var text = document.createElement('div');
-    text.className = 'idea-excerpt';
-    text.textContent = c.body;
-
     var meta = document.createElement('div');
     meta.className = 'idea-meta-row';
     meta.textContent = new Date(c.created_at).toLocaleString();
+
+    var text = document.createElement('div');
+    text.className = 'idea-excerpt';
+    text.textContent = c.body;
 
     var btn = document.createElement('button');
     btn.type = 'button';
@@ -118,13 +163,16 @@ function render(rows) {
   });
 }
 
+// Any session error sends the moderator back to sign-in.
+function handleError(e) {
+  if (e.message === 'session_expired') return showSignIn(errorText(e.message));
+  toast(errorText(e.message));
+}
+
 function load() {
-  showError('');
   return call({ action: 'list' }).then(function (d) {
     render(d.confessions || []);
-  }).catch(function (e) {
-    showError(errorText(e.message));
-  });
+  }).catch(handleError);
 }
 
 function remove(id) {
@@ -132,26 +180,54 @@ function remove(id) {
   call({ action: 'delete', id: id }).then(function () {
     var row = $('row-' + id);
     if (row) row.remove();
-    $('count').textContent = document.querySelectorAll('#list .idea-row').length + ' on record';
-    $('empty').style.display = document.querySelectorAll('#list .idea-row').length ? 'none' : 'block';
+    var left = document.querySelectorAll('#list .idea-row').length;
+    $('count').textContent = left + ' on record';
+    $('empty').style.display = left ? 'none' : 'block';
     toast('Deleted');
-  }).catch(function (e) {
-    showError(errorText(e.message));
-  });
+  }).catch(handleError);
 }
 
-$('pass-form').addEventListener('submit', function (e) {
+$('login-form').addEventListener('submit', function (e) {
   e.preventDefault();
-  passphrase = $('passphrase').value;
-  if (!passphrase) return;
-  load().then(function () {
-    if ($('error').style.display === 'none' || !$('error').textContent) $('passphrase').value = '';
+  var pw = $('passphrase').value;
+  if (!pw) return;
+  var btn = $('login-btn');
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+  fetch(ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'login', passphrase: pw })
+  }).then(function (r) {
+    return r.json().catch(function () { return {}; }).then(function (d) {
+      if (!r.ok) throw new Error(d.error || 'request_failed');
+      return d;
+    });
+  }).then(function (d) {
+    saveSession({ token: d.token, expires_at: d.expires_at });
+    $('passphrase').value = '';
+    showModeration();
+  }).catch(function (err) {
+    $('login-error').textContent = errorText(err.message);
+    $('login-error').style.display = 'block';
+  }).then(function () {
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
   });
 });
 
-$('reload').addEventListener('click', function () {
-  if (passphrase) load();
+$('logout').addEventListener('click', function () {
+  showSignIn('Signed out.');
 });
+
+$('reload').addEventListener('click', load);
+
+// Session timer: back to sign-in when the 8 hours run out.
+setInterval(function () {
+  if ($('mod-screen').style.display !== 'none' && !readSession()) showSignIn('Session ended. Sign in again.');
+}, 60000);
+
+if (readSession()) showModeration(); else showSignIn('');
 </script>
 </body>
 </html>

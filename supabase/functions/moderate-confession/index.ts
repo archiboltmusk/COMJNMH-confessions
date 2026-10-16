@@ -1,6 +1,7 @@
-// Moderator list + delete for confessions. Passphrase checked server-side.
+// Moderator login, list and delete for confessions.
 // Requires secret MODERATOR_PASSPHRASE (Supabase edge function secrets).
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected by Supabase.
+// Tokens are "<expiry-ms>.<hmac-hex>", signed with the passphrase, valid 8 hours.
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -8,21 +9,43 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const SESSION_MS = 8 * 60 * 60 * 1000;
+const enc = new TextEncoder();
+
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { ...CORS, "Content-Type": "application/json" },
   });
 
-// Constant-time comparison so the passphrase cannot be guessed by timing.
+// Constant-time comparison so secrets cannot be guessed by timing.
 function same(a: string, b: string): boolean {
-  const enc = new TextEncoder();
   const x = enc.encode(a);
   const y = enc.encode(b);
   let diff = x.length ^ y.length;
   const n = Math.max(x.length, y.length);
   for (let i = 0; i < n; i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
   return diff === 0;
+}
+
+async function sign(secret: string, exp: number): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const mac = await crypto.subtle.sign("HMAC", key, enc.encode(`moderator:${exp}`));
+  return [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function validToken(secret: string, token: unknown): Promise<boolean> {
+  if (typeof token !== "string") return false;
+  const [expStr, mac] = token.split(".");
+  const exp = Number(expStr);
+  if (!Number.isFinite(exp) || exp < Date.now() || !mac) return false;
+  return same(mac, await sign(secret, exp));
 }
 
 Deno.serve(async (req) => {
@@ -37,10 +60,19 @@ Deno.serve(async (req) => {
   }
 
   // Fail closed: no secret set means no moderator access at all.
-  const expected = Deno.env.get("MODERATOR_PASSPHRASE");
-  if (!expected) return json(503, { error: "not_configured" });
-  const given = typeof payload?.passphrase === "string" ? payload.passphrase : "";
-  if (!given || !same(given, expected)) return json(401, { error: "unauthorized" });
+  const secret = Deno.env.get("MODERATOR_PASSPHRASE");
+  if (!secret) return json(503, { error: "not_configured" });
+
+  if (payload?.action === "login") {
+    const given = typeof payload?.passphrase === "string" ? payload.passphrase : "";
+    if (!given || !same(given, secret)) return json(401, { error: "unauthorized" });
+    const exp = Date.now() + SESSION_MS;
+    return json(200, { token: `${exp}.${await sign(secret, exp)}`, expires_at: exp });
+  }
+
+  if (!(await validToken(secret, payload?.token))) {
+    return json(401, { error: "session_expired" });
+  }
 
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
