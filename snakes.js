@@ -1,7 +1,11 @@
 /* Snake sightings for Kalyani. A live camera photo and GPS go in; the last 48 hours come out.
-   No sign-in, and the sender is not stored. Data: Firestore collection snake_sightings (rules in snake-firestore.rules). */
+   No sign-in, and the sender is not stored. Data: Supabase table snake_sightings (supabase/migrations/20261016170000_snake_sightings.sql). */
 (function () {
   'use strict';
+
+  // Public project URL and anon key of the "confessions" Supabase project. Safe to ship: row rules do the limiting.
+  var SUPABASE_URL = 'https://btkkofaeksuyupajsigj.supabase.co';
+  var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ0a2tvZmFla3N1eXVwYWpzaWdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxMzk5ODYsImV4cCI6MjEwNzcxNTk4Nn0.qLCtq3fqid-WQcYp6AMAVH_AxT7w6PJeXIJ4XFUgG34';
 
   // Kalyani only. Centre of Kalyani town, Nadia; the radius is approximate, confirm before launch.
   var AREA = { name: 'Kalyani', lat: 22.9753, lng: 88.4433, radius_km: 8 };
@@ -42,9 +46,13 @@
     return h < 24 ? h + ' h ago' : Math.round(h / 24) + ' d ago';
   }
 
-  // Firebase is set up in firebase-backend.js (global `db`). Until its config is filled in, there is no store.
+  // Supabase client from the CDN script. Null if the script did not load.
   function store() {
-    try { return typeof db !== 'undefined' && db ? db : null; } catch (e) { return null; }
+    try {
+      return window.supabase && window.supabase.createClient
+        ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        : null;
+    } catch (e) { return null; }
   }
 
   var stream = null;
@@ -113,8 +121,8 @@
     var last = 0;
     try { last = Number(localStorage.getItem(COOLDOWN_KEY) || 0); } catch (e) {}
     if (Date.now() - last < COOLDOWN_MS) return say('You sent one a moment ago. Wait a few minutes before the next.', true);
-    var s = store();
-    if (!s) return say('Snake reports are not switched on yet.', true);
+    var sb = store();
+    if (!sb) return say('Snake reports are not switched on yet.', true);
 
     $('sn-send').disabled = true;
     say('Getting a precise location…');
@@ -125,15 +133,14 @@
       }
       if (!inArea(c.latitude, c.longitude)) throw new Error('Snake sightings are for ' + AREA.name + ' only.');
       say('Sending…');
-      await s.collection('snake_sightings').add({
+      var res = await sb.from('snake_sightings').insert({
         photo: shot,
         lat: round3(c.latitude),
         lng: round3(c.longitude),
         accuracy_m: Math.round(c.accuracy),
-        note: note || null,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        expireAt: firebase.firestore.Timestamp.fromMillis(Date.now() + HOURS * 3600 * 1000)
+        note: note || null
       });
+      if (res.error) throw new Error('Could not send. Try again in a moment.');
       try { localStorage.setItem(COOLDOWN_KEY, String(Date.now())); } catch (e) {}
       reset();
       say('Sent. Everyone in ' + AREA.name + ' can see it for 48 hours. Nobody sees who sent it.');
@@ -146,20 +153,23 @@
   }
 
   async function load() {
-    var s = store(), box = $('sn-list');
-    if (!s) {
+    var sb = store(), box = $('sn-list');
+    if (!sb) {
       $('sn-updated').textContent = 'Not switched on yet';
       box.innerHTML = '<p class="sn-empty">Sightings appear here once the site is connected to its database.</p>';
       return;
     }
     try {
-      var snap = await s.collection('snake_sightings')
-        .where('expireAt', '>', new Date()).orderBy('expireAt', 'desc').limit(50).get();
+      var res = await sb.from('snake_sightings')
+        .select('photo, note, created_at')
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (res.error) throw res.error;
       var html = [];
-      snap.forEach(function (d) {
-        var r = d.data();
+      (res.data || []).forEach(function (r) {
         if (!r.photo || r.photo.indexOf(PHOTO_PREFIX) !== 0) return;
-        var t = r.createdAt && r.createdAt.toMillis ? r.createdAt.toMillis() : Date.now();
+        var t = new Date(r.created_at).getTime();
         html.push('<article class="sn-item"><img src="' + esc(r.photo) + '" alt="Snake photo from ' + esc(AREA.name) + '" loading="lazy">' +
           '<div><div class="sn-when">' + esc(ago(t)) + ' · ' + esc(AREA.name) + '</div>' +
           (r.note ? '<p>' + esc(r.note) + '</p>' : '') + '</div></article>');
