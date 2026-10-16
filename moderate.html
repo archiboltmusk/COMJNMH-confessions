@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moderate — MedReform</title>
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Epilogue:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="/" class="logo">
+    <div class="logo-mark">M+</div>
+    <div>
+      <div class="logo-text">MedReform</div>
+      <div class="logo-sub">COMJNMH · Kalyani</div>
+    </div>
+  </a>
+  <span class="badge live">Moderation</span>
+</header>
+
+<div class="admin-screen active" style="display:block;padding:24px 16px;">
+  <div class="admin-shell">
+    <div class="admin-header">
+      <h1>Confessions</h1>
+      <span class="session-badge" id="count">—</span>
+      <div class="header-btns">
+        <button class="btn-export" id="reload" type="button">Reload</button>
+      </div>
+    </div>
+
+    <form id="pass-form" class="login-card" style="max-width:420px;margin:0 0 20px;">
+      <input type="password" id="passphrase" class="login-input" placeholder="Moderator passphrase"
+             autocomplete="off" required>
+      <button class="login-btn" type="submit">Load confessions</button>
+      <div class="login-error" id="error" role="alert"></div>
+    </form>
+
+    <div class="idea-list" id="list"></div>
+    <div class="empty-state" id="empty" style="display:none;">
+      <h3>No confessions</h3>
+      <p>Nothing to moderate right now.</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span class="toast-icon">✓</span><span class="toast-text"></span></div>
+
+<script>
+// Passphrase lives in memory only: gone on reload, never written to storage.
+var ENDPOINT = 'https://btkkofaeksuyupajsigj.supabase.co/functions/v1/moderate-confession';
+var passphrase = '';
+
+function $(id) { return document.getElementById(id); }
+
+function showError(msg) {
+  var el = $('error');
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+}
+
+function toast(msg) {
+  var t = $('toast');
+  t.querySelector('.toast-text').textContent = msg;
+  t.classList.add('show');
+  setTimeout(function () { t.classList.remove('show'); }, 2200);
+}
+
+function call(body) {
+  return fetch(ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({ passphrase: passphrase }, body))
+  }).then(function (r) {
+    return r.json().catch(function () { return {}; }).then(function (data) {
+      if (!r.ok) throw new Error(data.error || 'request_failed');
+      return data;
+    });
+  });
+}
+
+function errorText(code) {
+  if (code === 'unauthorized') return 'Wrong passphrase.';
+  if (code === 'not_configured') return 'Moderation is not switched on yet.';
+  return 'Could not reach the server. Try again.';
+}
+
+function render(rows) {
+  var list = $('list');
+  list.innerHTML = '';
+  $('count').textContent = rows.length + ' on record';
+  $('empty').style.display = rows.length ? 'none' : 'block';
+  rows.forEach(function (c) {
+    var row = document.createElement('div');
+    row.className = 'idea-row';
+    row.id = 'row-' + c.id;
+
+    var text = document.createElement('div');
+    text.className = 'idea-excerpt';
+    text.textContent = c.body;
+
+    var meta = document.createElement('div');
+    meta.className = 'idea-meta-row';
+    meta.textContent = new Date(c.created_at).toLocaleString();
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-action danger';
+    btn.textContent = 'Delete';
+    btn.onclick = function () { remove(c.id); };
+
+    row.appendChild(meta);
+    row.appendChild(text);
+    row.appendChild(btn);
+    list.appendChild(row);
+  });
+}
+
+function load() {
+  showError('');
+  return call({ action: 'list' }).then(function (d) {
+    render(d.confessions || []);
+  }).catch(function (e) {
+    showError(errorText(e.message));
+  });
+}
+
+function remove(id) {
+  if (!confirm('Delete this confession permanently?')) return;
+  call({ action: 'delete', id: id }).then(function () {
+    var row = $('row-' + id);
+    if (row) row.remove();
+    $('count').textContent = document.querySelectorAll('#list .idea-row').length + ' on record';
+    $('empty').style.display = document.querySelectorAll('#list .idea-row').length ? 'none' : 'block';
+    toast('Deleted');
+  }).catch(function (e) {
+    showError(errorText(e.message));
+  });
+}
+
+$('pass-form').addEventListener('submit', function (e) {
+  e.preventDefault();
+  passphrase = $('passphrase').value;
+  if (!passphrase) return;
+  load().then(function () {
+    if ($('error').style.display === 'none' || !$('error').textContent) $('passphrase').value = '';
+  });
+});
+
+$('reload').addEventListener('click', function () {
+  if (passphrase) load();
+});
+</script>
+</body>
+</html>
