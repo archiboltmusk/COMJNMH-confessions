@@ -44,6 +44,9 @@
 .confess-banner { background: #303030; color: #fff; border-radius: 8px; padding: 36px 32px; margin-bottom: 28px; text-align: right; font-family: 'Epilogue', sans-serif; font-weight: 500; font-size: clamp(26px, 4.5vw, 40px); line-height: 1.2; }
 .confess-banner .banner-go { color: #84a44d; }
 .confess-hero h1, .confess-feed-head h2 { font-family: 'Caveat Brush', cursive; font-weight: 400; }
+.share-img-btn { align-self: flex-start; background: none; border: 1px solid var(--accent); color: var(--accent); border-radius: 999px; padding: 6px 14px; font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; }
+.share-img-btn:hover { background: var(--accent-dim); }
+.share-img-btn:disabled { opacity: .6; cursor: default; }
 </style>
 </head>
 <body>
@@ -242,6 +245,95 @@ function commentBlock(confessionId, comments, reported) {
   return wrap;
 }
 
+// Renders one confession as a pink square card and downloads it as a PNG.
+// Author is never shown; course and batch are not part of the confession text here.
+// The image is for personal sharing. Nothing is uploaded to Instagram from this site.
+function wrapLines(g, text, maxWidth) {
+  const out = [];
+  text.split('\n').forEach(function (para) {
+    let line = '';
+    para.split(' ').forEach(function (word) {
+      const test = line ? line + ' ' + word : word;
+      if (g.measureText(test).width > maxWidth && line) { out.push(line); line = word; }
+      else line = test;
+    });
+    out.push(line);
+  });
+  return out;
+}
+
+function roundRect(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+
+async function shareAsImage(text, button) {
+  button.disabled = true;
+  try {
+    // Fonts must be ready before measuring, or the layout uses fallback fonts.
+    await Promise.all([
+      document.fonts.load("96px 'Caveat Brush'"),
+      document.fonts.load("44px 'Epilogue'"),
+      document.fonts.load("26px 'DM Mono'"),
+    ]);
+  } catch (e) {}
+
+  const W = 1080, H = 1350, PAD = 90, TEXT_W = W - PAD * 2 - 60;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const g = canvas.getContext('2d');
+
+  g.fillStyle = '#ed77ab';
+  g.fillRect(0, 0, W, H);
+  g.fillStyle = '#ffffff';
+  roundRect(g, 60, 60, W - 120, H - 120, 36);
+  g.fill();
+  g.fillStyle = '#ed77ab';
+  roundRect(g, 60, 60, W - 120, 22, 36);
+  g.fill();
+
+  g.fillStyle = '#202124';
+  g.font = "96px 'Caveat Brush', cursive";
+  g.fillText('Confessions', PAD, 230);
+
+  // Shrink the text until it fits the card.
+  let size = 56, lines = [];
+  while (size >= 30) {
+    g.font = size + "px 'Epilogue', sans-serif";
+    lines = wrapLines(g, text, TEXT_W);
+    if (lines.length * size * 1.4 <= H - 500) break;
+    size -= 4;
+  }
+  g.fillStyle = '#202124';
+  g.font = size + "px 'Epilogue', sans-serif";
+  let y = 360;
+  lines.forEach(function (ln) { g.fillText(ln, PAD, y); y += size * 1.4; });
+
+  g.fillStyle = '#5f6368';
+  g.font = "26px 'DM Mono', monospace";
+  g.fillText('@comjnmhconfessions', PAD, H - 150);
+  g.fillText('For personal sharing only.', PAD, H - 110);
+
+  const name = 'confession-' + Date.now() + '.png';
+  const link = document.createElement('a');
+  link.download = name;
+  try {
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    button.textContent = 'Image saved';
+  } catch (e) {
+    msg.textContent = 'Could not make the image. Please try again.';
+  } finally {
+    setTimeout(function () { button.disabled = false; button.textContent = 'Share as image'; }, 1500);
+  }
+}
+
 function renderList(rows, commentsByConfession) {
   list.textContent = '';
   if (!rows.length) {
@@ -261,7 +353,12 @@ function renderList(rows, commentsByConfession) {
     const when = document.createElement('div');
     when.className = 'idea-time';
     when.textContent = new Date(row.created_at).toLocaleString();
-    card.append(body, when, commentBlock(row.id, commentsByConfession[row.id] || [], reported));
+    const share = document.createElement('button');
+    share.type = 'button';
+    share.className = 'share-img-btn';
+    share.textContent = 'Share as image';
+    share.onclick = function () { shareAsImage(row.body, share); };
+    card.append(body, when, share, commentBlock(row.id, commentsByConfession[row.id] || [], reported));
     list.append(card);
   });
 }
