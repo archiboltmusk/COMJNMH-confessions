@@ -86,19 +86,16 @@
       <div class="char-count"><span id="text-count">0</span>/1000</div>
     </div>
 
-    <!-- ROLE -->
+    <!-- COURSE AND BATCH (optional) -->
     <div class="form-group">
-      <label class="form-label">🎓 Your Role</label>
-      <select class="form-select" id="role-select" onchange="updatePreview()">
-        <option value="MBBS Student (Phase I)">MBBS Student (Phase I)</option>
-        <option value="MBBS Student (Phase II)">MBBS Student (Phase II)</option>
-        <option value="MBBS Student (Clinical)" selected>MBBS Student (Clinical)</option>
-        <option value="PG Resident">PG Resident</option>
-        <option value="Junior Faculty">Junior Faculty</option>
-        <option value="Senior Faculty">Senior Faculty</option>
-        <option value="Non-Teaching Staff">Non-Teaching Staff</option>
-        <option value="Other">Other</option>
-      </select>
+      <label class="form-label">🎓 Course (optional)</label>
+      <select class="form-select" id="course-select" onchange="updatePreview()"><option value="">Choose</option><option value="MBBS">MBBS</option><option value="DNB">DNB</option><option value="MD">MD</option><option value="MS">MS</option><option value="Bsc CCT">Bsc CCT</option><option value="Bsc PA">Bsc PA</option><option value="BHA">BHA</option><option value="MHA">MHA</option><option value="Diploma CCT">Diploma CCT</option><option value="DMLT">DMLT</option><option value="Diploma ECG">Diploma ECG</option><option value="BSc OTT">BSc OTT</option><option value="BMLT">BMLT</option><option value="Bsc PT">Bsc PT</option><option value="Bsc Nursing">Bsc Nursing</option><option value="Other">Other</option></select>
+      <input class="form-input" id="course-other" maxlength="40" placeholder="Type your course" hidden oninput="updatePreview()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">🎓 Batch (optional)</label>
+      <select class="form-select" id="batch-select" onchange="updatePreview()"><option value="">Choose</option><option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option><option value="3rd Year">3rd Year</option><option value="4th Year">4th Year</option><option value="Intern">Intern</option><option value="House-staff/Junior Resident">House-staff/Junior Resident</option><option value="Alumni">Alumni</option><option value="PGY1">PGY1</option><option value="PGY2">PGY2</option><option value="PGY3">PGY3</option><option value="Senior Resident">Senior Resident</option><option value="Other">Other</option></select>
+      <input class="form-input" id="batch-other" maxlength="40" placeholder="Type your batch" hidden oninput="updatePreview()">
     </div>
 
     <!-- FEASIBILITY -->
@@ -202,10 +199,24 @@ function updateFeasibilityDisplay() {
 
 document.getElementById('feasibility-input').addEventListener('input', updateFeasibilityDisplay);
 
+// Course and batch are optional. Both are combined into one role label.
+// "Other" shows a text box and uses the typed text instead.
+function getRoleValue() {
+  var parts = [];
+  ['course', 'batch'].forEach(function (k) {
+    var sel = document.getElementById(k + '-select').value;
+    var other = document.getElementById(k + '-other');
+    other.hidden = sel !== 'Other';
+    if (sel === 'Other') { var t = other.value.trim(); if (t) parts.push(t); }
+    else if (sel) parts.push(sel);
+  });
+  return parts.length ? parts.join(' · ') : 'Not specified';
+}
+
 function updatePreview() {
   var title = document.getElementById('title-input').value;
   var text = document.getElementById('text-input').value;
-  var role = document.getElementById('role-select').value;
+  var role = getRoleValue();
   var name = document.getElementById('name-input').value || '';
   var category = selectedCategory || 'governance';
   
@@ -248,7 +259,7 @@ function submitIdea(e) {
   
   var title = document.getElementById('title-input').value.trim();
   var text = document.getElementById('text-input').value.trim();
-  var role = document.getElementById('role-select').value;
+  var role = getRoleValue();
   var name = document.getElementById('name-input').value.trim();
   var feasibility = parseInt(document.getElementById('feasibility-input').value);
   var error = document.getElementById('form-error');
