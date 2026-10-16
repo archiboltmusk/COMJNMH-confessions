@@ -18,7 +18,7 @@
 <meta name="twitter:image" content="/og-image.png">
 
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Epilogue:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="styles.css">
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
 <script>
@@ -36,7 +36,7 @@
 <body>
 
 <header class="site-header">
-  <a href="/" class="logo">
+  <a href="./" class="logo">
     <div class="logo-mark">M+</div>
     <div>
       <div class="logo-text">MedReform</div>
@@ -44,10 +44,10 @@
     </div>
   </a>
   <nav class="desktop-nav">
-    <a href="/" class="nav-link">Confessions</a>
-    <a href="/ideas" class="nav-link">Ideas</a>
-    <a href="/submit" class="nav-link active">Submit</a>
-    <a href="/snakes" class="nav-link">Snakes</a>
+    <a href="./" class="nav-link">Confessions</a>
+    <a href="ideas" class="nav-link">Ideas</a>
+    <a href="submit" class="nav-link active">Submit</a>
+    <a href="snakes" class="nav-link">Snakes</a>
   </nav>
   <span class="badge live">Share Your Idea</span>
 </header>
@@ -155,17 +155,17 @@
     <!-- SUBMIT -->
     <div class="submit-row">
       <button type="submit" class="btn-primary">✓ Publish Idea</button>
-      <a href="/ideas" class="btn-secondary">View All Ideas</a>
+      <a href="ideas" class="btn-secondary">View All Ideas</a>
     </div>
   </form>
 </div>
 
 <!-- Mobile bottom nav -->
 <nav class="mobile-nav">
-  <a href="/" class="mob-tab"><span class="mob-icon">⌂</span><span>Confessions</span></a>
-  <a href="/ideas" class="mob-tab"><span class="mob-icon">≡</span><span>Ideas</span></a>
-  <a href="/submit" class="mob-tab active"><span class="mob-icon">✎</span><span>Submit</span></a>
-  <a href="/snakes" class="mob-tab"><span class="mob-icon">🐍</span><span>Snakes</span></a>
+  <a href="./" class="mob-tab"><span class="mob-icon">⌂</span><span>Confessions</span></a>
+  <a href="ideas" class="mob-tab"><span class="mob-icon">≡</span><span>Ideas</span></a>
+  <a href="submit" class="mob-tab active"><span class="mob-icon">✎</span><span>Submit</span></a>
+  <a href="snakes" class="mob-tab"><span class="mob-icon">🐍</span><span>Snakes</span></a>
 </nav>
 
 <!-- Toast -->
@@ -174,7 +174,7 @@
   <span class="toast-text"></span>
 </div>
 
-<script src="/data.js"></script>
+<script src="data.js"></script>
 <script>
 var selectedCategory = null;
 var isAnon = true;
@@ -301,7 +301,7 @@ function submitIdea(e) {
   showToast('✓ Idea submitted! Thank you for contributing.', '✓');
   
   setTimeout(() => {
-    window.location.href = '/ideas?submitted=1';
+    window.location.href = 'ideas?submitted=1';
   }, 1500);
 }
 

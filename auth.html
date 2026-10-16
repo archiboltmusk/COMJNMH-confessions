@@ -7,7 +7,7 @@
 <meta name="description" content="Sign in to MedReform and share your campus reform ideas.">
 
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Epilogue:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="styles.css">
 
 <style>
   .auth-container { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, rgba(10,15,13,0.98) 0%, rgba(10,15,13,0.95) 100%); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
@@ -150,7 +150,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"></script>
 
 <!-- Backend -->
-<script src="/firebase-backend.js"></script>
+<script src="firebase-backend.js"></script>
 
 <script>
 function switchTab(tab) {
@@ -181,7 +181,7 @@ async function handleLogin(e) {
   const result = await MedReformAuth.login(email, password);
   
   if (result.success) {
-    window.location.href = '/';
+    window.location.href = './';
   } else {
     errorEl.textContent = result.error;
     errorEl.classList.add('show');
@@ -215,7 +215,7 @@ async function handleRegister(e) {
   const result = await MedReformAuth.register(email, password, name, role);
   
   if (result.success) {
-    window.location.href = '/';
+    window.location.href = './';
   } else {
     errorEl.textContent = result.error;
     errorEl.classList.add('show');
@@ -239,7 +239,7 @@ async function resetPassword() {
 // Check if user is already logged in
 MedReformAuth.onAuthStateChanged(user => {
   if (user) {
-    window.location.href = '/';
+    window.location.href = './';
   }
 });
 </script>
