@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confessions</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="container" style="max-width:720px;margin:0 auto;padding:16px">
+  <h1>Confessions</h1>
+  <p>Anonymous. Posts are checked automatically for hate speech and harmful content before they appear. Nothing is reviewed by hand.</p>
+
+  <form id="confess-form">
+    <label for="confess-body">Your confession (max 1000 characters)</label>
+    <textarea id="confess-body" name="body" rows="5" maxlength="1000" required style="width:100%;box-sizing:border-box"></textarea>
+    <button type="submit" id="confess-submit">Submit</button>
+    <p id="confess-msg" role="status"></p>
+  </form>
+
+  <section id="confess-list" aria-live="polite"></section>
+</main>
+
+<script>
+const SUPABASE_URL = 'https://btkkofaeksuyupajsigj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_jlT-cFu5qh-P43YKF73Fvg_lMqajMiE';
+
+const form = document.getElementById('confess-form');
+const msg = document.getElementById('confess-msg');
+const list = document.getElementById('confess-list');
+const submitBtn = document.getElementById('confess-submit');
+
+const MESSAGES = {
+  rejected: 'This post was not published because it breaks the rules (hate speech or harmful content).',
+  moderation_unavailable: 'Could not check your post right now. Please try again later.',
+  length_must_be_1_to_1000: 'Please write between 1 and 1000 characters.',
+};
+
+function renderList(rows) {
+  list.textContent = '';
+  rows.forEach(function (row) {
+    const card = document.createElement('article');
+    card.style.cssText = 'border-top:1px solid var(--border, #ddd);padding:12px 0';
+    const body = document.createElement('p');
+    body.textContent = row.body;
+    const when = document.createElement('small');
+    when.textContent = new Date(row.created_at).toLocaleString();
+    card.append(body, when);
+    list.append(card);
+  });
+}
+
+async function loadList() {
+  try {
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/confessions?select=id,body,created_at&order=created_at.desc&limit=100',
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY } }
+    );
+    if (!res.ok) throw new Error('load_failed');
+    renderList(await res.json());
+  } catch (e) {
+    msg.textContent = 'Could not load confessions. Please refresh.';
+  }
+}
+
+form.addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const body = document.getElementById('confess-body').value.trim();
+  submitBtn.disabled = true;
+  msg.textContent = 'Checking…';
+  try {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/submit-confession', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+      body: JSON.stringify({ body: body }),
+    });
+    const data = await res.json().catch(function () { return {}; });
+    if (res.status === 201) {
+      msg.textContent = 'Published.';
+      form.reset();
+      loadList();
+    } else {
+      msg.textContent = MESSAGES[data.error] || 'Something went wrong. Please try again.';
+    }
+  } catch (err) {
+    msg.textContent = 'Network error. Please try again.';
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
+
+loadList();
+</script>
+</body>
+</html>
