@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snakes in Kalyani — MedReform</title>
+<meta name="description" content="Saw a snake in Kalyani? Send one live photo from where you stand. Sightings show for 48 hours; nobody sees who sent them. First aid for snakebite.">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Epilogue:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<style>
+  .sn-wrap { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 40px 20px 100px; }
+  .sn-wrap h1 { font-family: 'Instrument Serif', serif; font-size: 40px; color: var(--text); line-height: 1.1; }
+  .sn-wrap h1 em { color: var(--accent); }
+  .sn-wrap h2 { font-family: 'Instrument Serif', serif; font-size: 26px; color: var(--text); margin: 0 0 8px; }
+  .sn-lede { margin-top: 12px; color: var(--text-muted); line-height: 1.6; }
+  .sn-small { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+  .sn-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-top: 28px; display: flex; flex-direction: column; gap: 14px; }
+  .sn-section { margin-top: 36px; }
+  .sn-btn { align-self: flex-start; background: var(--accent); color: var(--bg); border: none; border-radius: 8px; padding: 11px 22px; font-family: 'Epilogue', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .sn-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .sn-btn.ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+  video, #sn-preview { width: 100%; max-height: 60vh; object-fit: contain; border-radius: 10px; background: #000; }
+  .sn-msg { font-size: 14px; color: var(--text-muted); min-height: 1.4em; }
+  .sn-msg.bad { color: var(--red); }
+  .sn-cards { display: grid; gap: 14px; margin-top: 12px; }
+  .sn-item { display: grid; grid-template-columns: 96px 1fr; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+  .sn-item img { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; }
+  .sn-item p { margin-top: 6px; color: var(--text-muted); line-height: 1.5; font-size: 14px; }
+  .sn-when { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-dim); letter-spacing: 0.04em; text-transform: uppercase; }
+  .sn-empty { padding: 24px 0; color: var(--text-dim); font-family: 'DM Mono', monospace; font-size: 12px; }
+  .sn-first ol { margin: 0 0 0 1.2rem; color: var(--text-muted); line-height: 1.6; font-size: 14px; }
+  .sn-first li { margin: 6px 0; }
+  .sn-first a { color: var(--accent); }
+  @media (max-width: 600px) { .sn-wrap h1 { font-size: 32px; } .sn-item { grid-template-columns: 72px 1fr; } .sn-item img { width: 72px; height: 72px; } }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="/" class="logo">
+    <div class="logo-mark">M+</div>
+    <div>
+      <div class="logo-text">MedReform</div>
+      <div class="logo-sub">COMJNMH · Kalyani</div>
+    </div>
+  </a>
+  <nav class="desktop-nav">
+    <a href="/" class="nav-link">Home</a>
+    <a href="/ideas" class="nav-link">Ideas</a>
+    <a href="/submit" class="nav-link">Submit</a>
+    <a href="/snakes" class="nav-link active">Snakes</a>
+  </nav>
+  <span class="badge">Kalyani only</span>
+</header>
+
+<main class="sn-wrap">
+  <h1>Snakes in <em>Kalyani</em></h1>
+  <p class="sn-lede">Saw a snake? Stand back, take one photo from where you are, and send it. Everyone in Kalyani sees it for 48 hours. Nobody sees who sent it.</p>
+
+  <section class="sn-box" aria-labelledby="sn-send-h">
+    <h2 id="sn-send-h">Send a sighting</h2>
+    <p class="sn-small">The photo must be taken now, with the camera; no gallery uploads. Your location is stored rounded to about 100 m, not your exact point.</p>
+    <button type="button" class="sn-btn" id="sn-cam">Open camera</button>
+    <video id="sn-video" playsinline muted hidden></video>
+    <button type="button" class="sn-btn" id="sn-shoot" hidden>Take photo</button>
+    <img id="sn-preview" alt="Your photo of the snake" hidden>
+    <button type="button" class="sn-btn ghost" id="sn-retake" hidden>Retake</button>
+    <textarea id="sn-note" class="form-textarea" maxlength="140" placeholder="Where exactly (optional), e.g. near the water tank" hidden></textarea>
+    <button type="button" class="sn-btn" id="sn-send" hidden>Send sighting</button>
+    <p id="sn-msg" class="sn-msg" role="status"></p>
+  </section>
+
+  <section class="sn-section" aria-labelledby="sn-list-h">
+    <h2 id="sn-list-h">Seen in the last 48 hours <span id="sn-count"></span></h2>
+    <p class="sn-small" id="sn-updated">Loading…</p>
+    <div id="sn-list" class="sn-cards"></div>
+  </section>
+
+  <section class="sn-box sn-first" id="bite" aria-labelledby="bite-h">
+    <h2 id="bite-h">If someone is bitten</h2>
+    <p class="sn-small">From the Health Ministry's <a href="https://clinicalestablishments.mohfw.gov.in/sites/default/files/standard-treatment-guidelines/3941.pdf" target="_blank" rel="noopener">Standard Treatment Guidelines: Snakebite</a> (June 2016), first aid by bystanders:</p>
+    <ol>
+      <li>Reassure the person: most snakebites are from non-venomous snakes, and panic speeds up the heart.</li>
+      <li>Keep the bitten arm or leg still, like a broken limb, with a splint along its length. Do not block the blood supply or apply pressure.</li>
+      <li>Nothing to eat or drink until they reach a health centre.</li>
+      <li>Traditional remedies have no proven benefit.</li>
+      <li>Take them to the nearest PHC or hospital at once. They must not run or drive themselves.</li>
+      <li>Do not waste time trying to kill or catch the snake.</li>
+    </ol>
+    <p class="sn-small">Do not use tight tourniquets, cutting or sucking the wound, electric shocks, ice, or scarification.</p>
+  </section>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"></script>
+<script src="/firebase-backend.js"></script>
+<script src="/snakes.js"></script>
+</body>
+</html>

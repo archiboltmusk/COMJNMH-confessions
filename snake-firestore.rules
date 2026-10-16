@@ -1,0 +1,23 @@
+// Snake sightings (snakes.html). Merge this block into the live Firestore ruleset.
+// Do not deploy this file alone: a rules file replaces the whole ruleset.
+// Also set a TTL policy on snake_sightings.expireAt in the Firebase console (deletes after 48 h).
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /snake_sightings/{id} {
+      allow read: if true;
+      allow update, delete: if false;
+      allow create: if request.resource.data.keys().hasOnly(['photo', 'lat', 'lng', 'accuracy_m', 'note', 'createdAt', 'expireAt'])
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.expireAt > request.time
+        && request.resource.data.expireAt < request.time + duration.value(2, 'd')
+        && request.resource.data.photo is string
+        && request.resource.data.photo.size() <= 900000
+        && request.resource.data.photo.matches('^data:image/jpeg;base64,.*')
+        && request.resource.data.lat is number && request.resource.data.lat >= 22.90 && request.resource.data.lat <= 23.05
+        && request.resource.data.lng is number && request.resource.data.lng >= 88.36 && request.resource.data.lng <= 88.51
+        && request.resource.data.accuracy_m is number && request.resource.data.accuracy_m <= 100
+        && (request.resource.data.note == null || (request.resource.data.note is string && request.resource.data.note.size() <= 140));
+    }
+  }
+}
