@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
 
   if (payload?.action === "comments") {
     const r = await fetch(
-      `${url}/rest/v1/confession_comments?select=id,confession_id,body,created_at,report_count,hidden&order=created_at.desc&limit=500`,
+      `${url}/rest/v1/confession_comments?select=id,confession_id,body,created_at,report_count,hidden,instagram&order=created_at.desc&limit=500`,
       { headers },
     );
     if (!r.ok) return json(500, { error: "list_failed" });

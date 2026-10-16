@@ -42,6 +42,10 @@ Deno.serve(async (req) => {
   const text = typeof payload?.body === "string" ? payload.body.trim() : "";
   if (!UUID.test(confessionId)) return json(400, { error: "bad_confession" });
   if (text.length < 1 || text.length > 500) return json(400, { error: "length_must_be_1_to_500" });
+  // Optional Instagram handle: leading @ allowed, letters, numbers, dots and underscores only.
+  const rawHandle = typeof payload?.instagram === "string" ? payload.instagram.trim().replace(/^@/, "") : "";
+  if (rawHandle && !/^[A-Za-z0-9._]{1,30}$/.test(rawHandle)) return json(400, { error: "bad_instagram" });
+  const handle = rawHandle || null;
 
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -70,20 +74,27 @@ Deno.serve(async (req) => {
       Authorization: `Bearer ${Deno.env.get("OPENAI_API_KEY")}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model: "omni-moderation-latest", input: text }),
+    body: JSON.stringify({ model: "omni-moderation-latest", input: handle ? [text, handle] : [text] }),
   });
   if (!modRes.ok) return json(503, { error: "moderation_unavailable" });
   const modData = await modRes.json();
-  if (modData?.results?.[0]?.flagged) return json(422, { error: "rejected" });
+  if ((modData?.results ?? []).some((r: { flagged: boolean }) => r.flagged)) return json(422, { error: "rejected" });
 
   const insRes = await fetch(`${url}/rest/v1/confession_comments`, {
     method: "POST",
     headers: { ...db, "Content-Type": "application/json", Prefer: "return=representation" },
-    body: JSON.stringify({ confession_id: confessionId, body: text, device_hash: deviceHash }),
+    // The handle column is sent only when a handle is given, so comments without one never touch it.
+    body: JSON.stringify({ confession_id: confessionId, body: text, device_hash: deviceHash, ...(handle ? { instagram: handle } : {}) }),
   });
   if (!insRes.ok) return json(500, { error: "store_failed" });
   const [row] = await insRes.json();
   return json(201, {
-    comment: { id: row.id, confession_id: row.confession_id, body: row.body, created_at: row.created_at },
+    comment: {
+      id: row.id,
+      confession_id: row.confession_id,
+      body: row.body,
+      created_at: row.created_at,
+      instagram: row.instagram ?? null,
+    },
   });
 });
