@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blood donors — MedReform</title>
+<meta name="description" content="Volunteer blood donors for the COMJNMH community. Join on purpose, search by blood group and area. Phone numbers are shown only when the donor chooses.">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Epilogue:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .dn-wrap { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 40px 20px 100px; }
+  .dn-wrap h1 { font-family: 'Instrument Serif', serif; font-size: 40px; color: var(--text); line-height: 1.1; }
+  .dn-wrap h1 em { color: var(--accent); }
+  .dn-wrap h2 { font-family: 'Instrument Serif', serif; font-size: 26px; color: var(--text); margin: 0 0 8px; }
+  .dn-lede { margin-top: 12px; color: var(--text-muted); line-height: 1.6; }
+  .dn-small { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+  .dn-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-top: 28px; display: flex; flex-direction: column; gap: 14px; }
+  .dn-section { margin-top: 36px; }
+  .dn-field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--text-muted); }
+  .dn-field input, .dn-field select { font: inherit; font-size: 15px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .dn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .dn-check { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+  .dn-check input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+  .dn-btn { align-self: flex-start; background: var(--accent); color: var(--bg); border: none; border-radius: 8px; padding: 11px 22px; font-family: 'Epilogue', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .dn-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .dn-btn.ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+  .dn-msg { font-size: 14px; color: var(--text-muted); min-height: 1.4em; line-height: 1.5; }
+  .dn-msg.bad { color: var(--red); }
+  .dn-code { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text); background: var(--bg); border: 1px dashed var(--border); border-radius: 8px; padding: 10px 12px; word-break: break-all; user-select: all; }
+  .dn-cards { display: grid; gap: 12px; margin-top: 12px; }
+  .dn-item { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .dn-item strong { font-family: 'Epilogue', sans-serif; color: var(--text); font-size: 16px; }
+  .dn-item .dn-meta { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+  .dn-group { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 4px 12px; align-self: flex-start; }
+  .dn-hidden { font-size: 13px; color: var(--text-dim); font-style: italic; }
+  .dn-contact a { color: var(--accent); }
+  .dn-empty { padding: 24px 0; color: var(--text-dim); font-family: 'DM Mono', monospace; font-size: 12px; }
+  .dn-search { display: grid; grid-template-columns: 1fr 1fr auto; gap: 14px; align-items: end; }
+  @media (max-width: 600px) { .dn-wrap h1 { font-size: 32px; } .dn-row, .dn-search { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="./" class="logo">
+    <div class="logo-mark">M+</div>
+    <div>
+      <div class="logo-text">MedReform</div>
+      <div class="logo-sub">COMJNMH · Kalyani</div>
+    </div>
+  </a>
+  <nav class="desktop-nav">
+    <a href="./" class="nav-link">Confessions</a>
+    <a href="ideas" class="nav-link">Ideas</a>
+    <a href="submit" class="nav-link">Submit</a>
+    <a href="snakes" class="nav-link">Snakes</a>
+    <a href="donors" class="nav-link active">Blood</a>
+  </nav>
+</header>
+
+<main class="dn-wrap">
+  <h1>Blood <em>donors</em></h1>
+  <p class="dn-lede">Medical students know how much blood saves lives. Join as a volunteer donor, or search for one by blood group and area. Your phone number and email are hidden unless you choose to show them. This list does not replace a blood bank: in an emergency, call the hospital's blood bank first.</p>
+
+  <section class="dn-box" aria-labelledby="dn-find-h">
+    <h2 id="dn-find-h">Find a donor</h2>
+    <form id="dn-search" class="dn-search">
+      <label class="dn-field">Blood group
+        <select id="dn-group">
+          <option value="">Any</option>
+          <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+          <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+        </select>
+      </label>
+      <label class="dn-field">Area
+        <input id="dn-area" type="text" maxlength="80" placeholder="e.g. Kalyani, Ward 12">
+      </label>
+      <button type="submit" class="dn-btn">Search</button>
+    </form>
+    <p class="dn-small">Donors are listed newest first, up to 200. Only donors who joined are listed, and only they can take their entry down.</p>
+  </section>
+
+  <section class="dn-section" aria-labelledby="dn-results-h">
+    <h2 id="dn-results-h">Donors <span id="dn-count"></span></h2>
+    <p id="dn-status" class="dn-msg" role="status"></p>
+    <div id="dn-results" class="dn-cards"></div>
+  </section>
+
+  <section class="dn-section" aria-labelledby="dn-join-h">
+    <h2 id="dn-join-h">Join as a donor</h2>
+    <form id="dn-join" class="dn-box" novalidate>
+      <p class="dn-small">Name, blood group, area and one contact are shown to anyone who searches. Phone and email stay hidden unless you tick the box below.</p>
+      <div class="dn-row">
+        <label class="dn-field">Name
+          <input id="dn-name" name="name" type="text" maxlength="80" required autocomplete="name">
+        </label>
+        <label class="dn-field">Blood group
+          <select id="dn-join-group" name="blood_group" required>
+            <option value="">Choose</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+          </select>
+        </label>
+      </div>
+      <label class="dn-field">Area (town, ward or locality)
+        <input id="dn-join-area" name="area" type="text" maxlength="80" required>
+      </label>
+      <div class="dn-row">
+        <label class="dn-field">Phone (optional if you give email)
+          <input id="dn-phone" name="phone" type="tel" maxlength="20" autocomplete="tel" placeholder="+91 98765 43210">
+        </label>
+        <label class="dn-field">Email (optional if you give phone)
+          <input id="dn-email" name="email" type="email" maxlength="120" autocomplete="email">
+        </label>
+      </div>
+      <label class="dn-check"><input id="dn-show" type="checkbox"> Show my phone and email to people who search. Leave unticked to stay hidden; you can change this later with your code.</label>
+      <label class="dn-check"><input id="dn-consent" type="checkbox" required> I am between 18 and 65 years old, and it has been at least 4 months since my last whole-blood donation, or I have never donated. I understand the blood bank checks my weight, haemoglobin and health before any donation.</label>
+      <button type="submit" class="dn-btn" id="dn-join-btn">Join the donor list</button>
+      <p id="dn-join-msg" class="dn-msg" role="status"></p>
+    </form>
+  </section>
+
+  <section class="dn-section" id="dn-mine" aria-labelledby="dn-mine-h">
+    <h2 id="dn-mine-h">Manage my entry</h2>
+    <div class="dn-box">
+      <p class="dn-small">When you join you get a code. Keep it: it is the only way to show or hide your contact, or to delete your entry. We store only a fingerprint of the code, so a lost code cannot be recovered.</p>
+      <div id="dn-code-box" hidden>
+        <p class="dn-small">Your code (copy it now; it is shown once):</p>
+        <div id="dn-code" class="dn-code"></div>
+      </div>
+      <label class="dn-field">Your code
+        <input id="dn-code-input" type="text" autocomplete="off" spellcheck="false" maxlength="100">
+      </label>
+      <div class="dn-row">
+        <button type="button" class="dn-btn ghost" id="dn-show-on">Show my contact</button>
+        <button type="button" class="dn-btn ghost" id="dn-show-off">Hide my contact</button>
+      </div>
+      <button type="button" class="dn-btn ghost" id="dn-withdraw">Delete my entry</button>
+      <p id="dn-mine-msg" class="dn-msg" role="status"></p>
+    </div>
+  </section>
+</main>
+
+<nav class="mobile-nav">
+  <a href="./" class="mob-tab"><span class="mob-icon">⌂</span><span>Confessions</span></a>
+  <a href="ideas" class="mob-tab"><span class="mob-icon">≡</span><span>Ideas</span></a>
+  <a href="submit" class="mob-tab"><span class="mob-icon">✎</span><span>Submit</span></a>
+  <a href="snakes" class="mob-tab"><span class="mob-icon">🐍</span><span>Snakes</span></a>
+  <a href="donors" class="mob-tab active"><span class="mob-icon">🩸</span><span>Blood</span></a>
+</nav>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="donors.js"></script>
+</body>
+</html>
