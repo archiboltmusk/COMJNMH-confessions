@@ -1,6 +1,6 @@
-/* Blood donor list for donors.html. Donors join on purpose; anyone can search by blood group and area.
+/* Blood donor list for donors.html. Donors join on purpose; anyone can search by blood group and area, or near them (approximate location, 25 km, closest first).
    Phone and email come back only for donors who chose to show them. A donor manages their entry with a code shown once at sign-up.
-   Data: Supabase table blood_donors (supabase/migrations/20261016200000_blood_donors.sql), read and written only through RPCs. */
+   Data: Supabase table blood_donors (supabase/migrations/20261016200000_blood_donors.sql, 20261016210000_blood_nearby.sql), read and written only through RPCs. */
 (function () {
   'use strict';
 
@@ -75,6 +75,83 @@
     $('dn-count').textContent = '(' + rows.length + ')';
     say(status, '');
     renderDonors(rows);
+  }
+
+  // Near me --------------------------------------------------------------
+
+  // Location is rounded to 0.01 degree (about 1 km) before it leaves the device. Nothing is stored on this page.
+  var roundLoc = function (n) { return Math.round(n * 100) / 100; };
+
+  function locate() {
+    return new Promise(function (resolve, reject) {
+      if (!navigator.geolocation) { reject(new Error('no_geo')); return; }
+      navigator.geolocation.getCurrentPosition(
+        function (p) { resolve({ lat: roundLoc(p.coords.latitude), lng: roundLoc(p.coords.longitude) }); },
+        function () { reject(new Error('denied')); },
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+      );
+    });
+  }
+
+  function renderNearby(rows) {
+    var box = $('dn-results');
+    if (!rows.length) {
+      box.innerHTML = '<p class="dn-empty">No donors within 25 km have shared a location yet. Try area search, or join below.</p>';
+      return;
+    }
+    box.innerHTML = rows.map(function (r) {
+      var contact = '';
+      if (r.show_contact) {
+        var parts = [];
+        if (r.phone) parts.push('<a href="tel:' + esc(r.phone) + '">' + esc(r.phone) + '</a>');
+        if (r.email) parts.push('<a href="mailto:' + esc(r.email) + '">' + esc(r.email) + '</a>');
+        contact = '<div class="dn-meta dn-contact">' + parts.join(' · ') + '</div>';
+      } else {
+        contact = '<div class="dn-hidden">Contact hidden: this donor has not chosen to show it.</div>';
+      }
+      return '<article class="dn-item">' +
+        '<div><strong>' + esc(r.name) + '</strong><div class="dn-meta">' + esc(r.area) + ' · about ' + esc(r.distance_km) + ' km away</div>' +
+        contact +
+        '<div class="dn-row"><button type="button" class="dn-btn ghost dn-report" data-id="' + esc(r.id) + '">Report this listing</button></div></div>' +
+        '<span class="dn-group">' + esc(r.blood_group) + '</span>' +
+        '</article>';
+    }).join('');
+  }
+
+  async function nearMe() {
+    var status = $('dn-status');
+    if (!sb) { say(status, 'Donor list is not on yet. Please try again later.', true); return; }
+    var group = $('dn-group').value;
+    say(status, 'Getting your rough location…');
+    var here;
+    try { here = await locate(); } catch (err) {
+      say(status, 'Location is off or was refused. You can still search by area.', true);
+      return;
+    }
+    say(status, 'Searching…');
+    var res = await sb.rpc('blood_donor_nearby', { p_lat: here.lat, p_lng: here.lng, p_blood_group: group || null, p_radius_km: 25 });
+    if (res.error) {
+      var limited = String(res.error.message || '').indexOf('rate_limited') >= 0;
+      say(status, limited ? 'Too many searches from this connection. Try again in an hour.' : 'Could not search near you right now. Please try again.', true);
+      return;
+    }
+    var rows = res.data || [];
+    $('dn-count').textContent = '(' + rows.length + ')';
+    say(status, '');
+    renderNearby(rows);
+  }
+
+  async function report(id, btn) {
+    var status = $('dn-status');
+    if (!window.confirm('Report this listing? Three reports hide it from search.')) return;
+    btn.disabled = true;
+    var res = await sb.rpc('blood_donor_report', { p_donor_id: Number(id), p_reason: 'Reported by a visitor' });
+    if (res.error || res.data !== true) {
+      btn.disabled = false;
+      say(status, 'Could not send the report. Try again later.', true);
+      return;
+    }
+    btn.textContent = 'Reported. Thank you';
   }
 
   // Join -----------------------------------------------------------------
@@ -159,6 +236,24 @@
     search();
   }
 
+  async function setLocation(on) {
+    var msg = $('dn-mine-msg');
+    if (!sb) { say(msg, 'Donor list is not on yet. Please try again later.', true); return; }
+    var code = $('dn-code-input').value.trim();
+    if (!code) { say(msg, 'Paste the code you got when you joined.', true); return; }
+    var here = { lat: null, lng: null };
+    if (on) {
+      try { here = await locate(); } catch (err) {
+        say(msg, 'Location is off or was refused, so nothing was shared.', true);
+        return;
+      }
+    }
+    var res = await sb.rpc('blood_donor_set_location', { p_token: code, p_lat: here.lat, p_lng: here.lng });
+    if (res.error) { say(msg, 'Could not reach the donor list. Please try again.', true); return; }
+    if (!res.data) { say(msg, 'No entry matches this code.', true); return; }
+    say(msg, on ? 'Your approximate location (about 1 km) is shared for near-me searches.' : 'Your location is no longer shared.');
+  }
+
   // Start ----------------------------------------------------------------
 
   $('dn-search').addEventListener('submit', search);
@@ -166,6 +261,13 @@
   $('dn-show-on').addEventListener('click', function () { manage('show'); });
   $('dn-show-off').addEventListener('click', function () { manage('hide'); });
   $('dn-withdraw').addEventListener('click', function () { manage('withdraw'); });
+  $('dn-near').addEventListener('click', nearMe);
+  $('dn-loc-on').addEventListener('click', function () { setLocation(true); });
+  $('dn-loc-off').addEventListener('click', function () { setLocation(false); });
+  $('dn-results').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.dn-report') : null;
+    if (b) report(b.getAttribute('data-id'), b);
+  });
 
   var code = storedCode();
   if (code) $('dn-code-input').value = code;

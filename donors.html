@@ -77,7 +77,11 @@
       </label>
       <button type="submit" class="dn-btn">Search</button>
     </form>
-    <p class="dn-small">Donors are listed newest first, up to 200. Only donors who joined are listed, and only they can take their entry down.</p>
+    <div class="dn-row">
+      <button type="button" class="dn-btn ghost" id="dn-near">Find donors near me</button>
+    </div>
+    <p class="dn-small">Area search lists donors newest first, up to 200. "Near me" uses your phone's location for this search only: it is rounded to about 1 km, and nothing about you is stored. It lists donors within 25 km who chose to share an approximate location, closest first.</p>
+    <p class="dn-small"><strong>This is not an emergency service.</strong> For an emergency call 112 or go to your hospital's blood bank. Donors are volunteers and may not be free, reachable or eligible when you call.</p>
   </section>
 
   <section class="dn-section" aria-labelledby="dn-results-h">
@@ -135,6 +139,11 @@
         <button type="button" class="dn-btn ghost" id="dn-show-on">Show my contact</button>
         <button type="button" class="dn-btn ghost" id="dn-show-off">Hide my contact</button>
       </div>
+      <div class="dn-row">
+        <button type="button" class="dn-btn ghost" id="dn-loc-on">Share my approximate location</button>
+        <button type="button" class="dn-btn ghost" id="dn-loc-off">Stop sharing location</button>
+      </div>
+      <p class="dn-small">Location sharing is off unless you press the first button. Your position is rounded to about 1 km before it is sent, and only "near me" searches use it.</p>
       <button type="button" class="dn-btn ghost" id="dn-withdraw">Delete my entry</button>
       <p id="dn-mine-msg" class="dn-msg" role="status"></p>
     </div>
