@@ -1,210 +1,95 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MedReform — Campus Ideas Platform for COMJNMH</title>
-<meta name="description" content="MedReform: Submit reform proposals, vote on ideas, shape your college. Community-driven. Fully anonymous option.">
-<meta property="og:type" content="website">
-<meta property="og:title" content="MedReform — Fix What's Broken at COMJNMH">
-<meta property="og:description" content="Campus reform platform for students, residents, and faculty.">
-<meta property="og:image" content="/og-image.png">
-
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Epilogue:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css">
-
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-XXXXXXXXXX', { 'anonymize_ip': true });
-</script>
-
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confessions</title>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<main class="container" style="max-width:720px;margin:0 auto;padding:16px">
+  <h1>Confessions</h1>
+  <p>Anonymous. Posts are checked automatically for hate speech and harmful content before they appear. Nothing is reviewed by hand.</p>
 
-<header class="site-header">
-  <a href="/" class="logo">
-    <div class="logo-mark">M+</div>
-    <div>
-      <div class="logo-text">MedReform</div>
-      <div class="logo-sub">COMJNMH · Kalyani</div>
-    </div>
-  </a>
-  <nav class="desktop-nav">
-    <a href="/" class="nav-link active">Home</a>
-    <a href="/ideas" class="nav-link">Ideas</a>
-    <a href="/submit" class="nav-link">Submit</a>
-    <a href="#" id="nav-auth" class="nav-link" onclick="handleNavAuth(event)">Login</a>
-  </nav>
-  <span class="badge live">● Live Platform</span>
-</header>
+  <form id="confess-form">
+    <label for="confess-body">Your confession (max 1000 characters)</label>
+    <textarea id="confess-body" name="body" rows="5" maxlength="1000" required style="width:100%;box-sizing:border-box"></textarea>
+    <button type="submit" id="confess-submit">Submit</button>
+    <p id="confess-msg" role="status"></p>
+  </form>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-content">
-    <h1>Fix what's <span class="hero-broken">broken.</span></h1>
-    <p class="hero-subtitle">COMJNMH students, residents, and faculty collectively identify, propose, and vote on campus reforms. From safety protocols to academic improvements — your ideas shape our future.</p>
-    
-    <div class="hero-ctas">
-      <a href="/ideas" class="btn-primary">Browse Ideas →</a>
-      <a href="/auth" class="btn-ghost">Share Your Idea</a>
-    </div>
-
-    <div class="stats-row">
-      <div class="stat">
-        <div class="stat-num" id="stat-ideas">0</div>
-        <div class="stat-label">Ideas</div>
-      </div>
-      <div class="stat">
-        <div class="stat-num" id="stat-votes">0</div>
-        <div class="stat-label">Votes</div>
-      </div>
-      <div class="stat">
-        <div class="stat-num" id="stat-impl">0</div>
-        <div class="stat-label">Implemented</div>
-      </div>
-      <div class="stat">
-        <div class="stat-num">180+</div>
-        <div class="stat-label">Active Users</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- TOP IDEAS -->
-<section class="section">
-  <div class="section-head">
-    <h2>Top Ideas This Month</h2>
-    <p>Community-submitted proposals getting the most support.</p>
-  </div>
-  <div class="ideas-grid" id="top-ideas"></div>
-</section>
-
-<!-- TRENDING -->
-<section class="section">
-  <div class="section-head">
-    <h2>Trending Now 🔥</h2>
-    <p>Ideas gaining momentum in recent discussions.</p>
-  </div>
-  <div class="ideas-grid" id="trending-ideas"></div>
-</section>
-
-<!-- CTA -->
-<section class="section">
-  <div class="cta-section">
-    <h3>Have a Better Idea?</h3>
-    <p>COMJNMH's success depends on hearing from you. Share your proposal today — fully anonymous option available.</p>
-    <a href="/auth" class="btn-primary">Share Your Idea Now →</a>
-  </div>
-</section>
-
-<!-- MOBILE NAV -->
-<nav class="mobile-nav">
-  <a href="/" class="mob-tab active" style="background: var(--accent-dim); color: var(--accent);"><span class="mob-icon">⌂</span><span>Home</span></a>
-  <a href="/ideas" class="mob-tab"><span class="mob-icon">≡</span><span>Ideas</span></a>
-  <a href="/submit" class="mob-tab"><span class="mob-icon">✎</span><span>Submit</span></a>
-  <a href="#" id="mob-auth" class="mob-tab" onclick="handleNavAuth(event)"><span class="mob-icon">👤</span><span>Account</span></a>
-</nav>
-
-<!-- TOAST -->
-<div class="toast" id="toast">
-  <span class="toast-icon">✓</span>
-  <span class="toast-text"></span>
-</div>
-
-<script src="/data.js"></script>
-<!-- Firebase (optional — falls back to localStorage if credentials are not configured) -->
-<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"></script>
-<script src="/firebase-backend.js"></script>
+  <section id="confess-list" aria-live="polite"></section>
+</main>
 
 <script>
-function makeCard(idea) {
-  var title = idea.title || '';
-  var short = title.length > 60 ? title.substring(0, 60) + '...' : title;
-  return '<a href="/ideas" class="idea-card">' +
-    '<div class="idea-votes">▲ ' + (idea.votes || 0) + '</div>' +
-    '<div class="idea-title">' + escHtml(short) + '</div>' +
-    '<div class="idea-meta">' +
-    '<span>' + escHtml(idea.author || '') + '</span>' +
-    '<span class="idea-badge">' + escHtml(idea.category || '') + '</span>' +
-    '<span class="idea-badge">' + escHtml(statusLabel(idea.status || 'submitted')) + '</span>' +
-    '</div></a>';
+const SUPABASE_URL = 'https://btkkofaeksuyupajsigj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_jlT-cFu5qh-P43YKF73Fvg_lMqajMiE';
+
+const form = document.getElementById('confess-form');
+const msg = document.getElementById('confess-msg');
+const list = document.getElementById('confess-list');
+const submitBtn = document.getElementById('confess-submit');
+
+const MESSAGES = {
+  rejected: 'This post was not published because it breaks the rules (hate speech or harmful content).',
+  moderation_unavailable: 'Could not check your post right now. Please try again later.',
+  length_must_be_1_to_1000: 'Please write between 1 and 1000 characters.',
+};
+
+function renderList(rows) {
+  list.textContent = '';
+  rows.forEach(function (row) {
+    const card = document.createElement('article');
+    card.style.cssText = 'border-top:1px solid var(--border, #ddd);padding:12px 0';
+    const body = document.createElement('p');
+    body.textContent = row.body;
+    const when = document.createElement('small');
+    when.textContent = new Date(row.created_at).toLocaleString();
+    card.append(body, when);
+    list.append(card);
+  });
 }
 
-function renderHomeIdeas(ideas) {
-  var now = Date.now();
-  document.getElementById('stat-ideas').textContent = ideas.length;
-  document.getElementById('stat-votes').textContent = ideas.reduce(function(s, i) { return s + (i.votes || 0); }, 0);
-  document.getElementById('stat-impl').textContent  = ideas.filter(function(i) { return i.status === 'implemented'; }).length;
-
-  var topIdeas = ideas.slice().sort(function(a, b) { return b.votes - a.votes; }).slice(0, 3);
-  document.getElementById('top-ideas').innerHTML = topIdeas.map(makeCard).join('');
-
-  var trendingIdeas = ideas.slice()
-    .map(function(i) {
-      var ts = i.createdAt || i.submittedAt || now;
-      return { idea: i, score: (i.votes || 0) / (1 + (now - ts) / (7*24*60*60*1000)) };
-    })
-    .sort(function(a, b) { return b.score - a.score; })
-    .slice(0, 3).map(function(x) { return x.idea; });
-  document.getElementById('trending-ideas').innerHTML = trendingIdeas.map(makeCard).join('');
-}
-
-async function initHome() {
-  var loadedViaFirebase = false;
-
+async function loadList() {
   try {
-    if (typeof MedReformIdeas !== 'undefined') {
-      var result = await MedReformIdeas.getIdeas({ notFlagged: true });
-      if (result && result.success && Array.isArray(result.ideas)) {
-        renderHomeIdeas(result.ideas);
-        loadedViaFirebase = true;
-      }
-    }
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/confessions?select=id,body,created_at&order=created_at.desc&limit=100',
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY } }
+    );
+    if (!res.ok) throw new Error('load_failed');
+    renderList(await res.json());
   } catch (e) {
-    // Firebase unavailable or not configured — fall through to localStorage
+    msg.textContent = 'Could not load confessions. Please refresh.';
   }
-
-  if (!loadedViaFirebase) {
-    var ideas = getIdeas().filter(function(i) { return !i.flagged; });
-    renderHomeIdeas(ideas);
-  }
-
-  try {
-    if (typeof MedReformAuth !== 'undefined') {
-      MedReformAuth.onAuthStateChanged(function(user) {
-        var navAuth = document.getElementById('nav-auth');
-        var mobAuth = document.getElementById('mob-auth');
-        if (user) {
-          if (navAuth) { navAuth.textContent = 'Logout'; navAuth.onclick = handleLogout; }
-          if (mobAuth) { mobAuth.querySelector('span:last-child').textContent = 'Logout'; mobAuth.onclick = handleLogout; }
-        }
-      });
-    }
-  } catch (e) {}
 }
 
-function handleNavAuth(e) {
+form.addEventListener('submit', async function (e) {
   e.preventDefault();
+  const body = document.getElementById('confess-body').value.trim();
+  submitBtn.disabled = true;
+  msg.textContent = 'Checking…';
   try {
-    if (typeof MedReformAuth !== 'undefined' && MedReformAuth.getCurrentUser()) {
-      handleLogout(e);
+    const res = await fetch(SUPABASE_URL + '/functions/v1/submit-confession', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+      body: JSON.stringify({ body: body }),
+    });
+    const data = await res.json().catch(function () { return {}; });
+    if (res.status === 201) {
+      msg.textContent = 'Published.';
+      form.reset();
+      loadList();
+    } else {
+      msg.textContent = MESSAGES[data.error] || 'Something went wrong. Please try again.';
     }
-  } catch (e) {}
-}
+  } catch (err) {
+    msg.textContent = 'Network error. Please try again.';
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
 
-async function handleLogout(e) {
-  if (e) e.preventDefault();
-  try { await MedReformAuth.logout(); } catch (e) {}
-  window.location.href = '/auth';
-}
-
-initHome();
+loadList();
 </script>
 </body>
 </html>
