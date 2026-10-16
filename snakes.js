@@ -76,12 +76,19 @@
     stream = null;
   }
 
+  // Camera stage: full screen while live, back to the page after the photo, Retake or Cancel.
+  function setLive(on) {
+    $('sn-stage').className = on ? 'live' : '';
+    $('sn-video').hidden = !on;
+    $('sn-shoot').hidden = !on;
+    $('sn-cancel').hidden = !on;
+  }
+
   function reset() {
     shot = null;
     autoFix = null;
     stopCamera();
-    $('sn-video').hidden = true;
-    $('sn-shoot').hidden = true;
+    setLive(false);
     $('sn-preview').hidden = true;
     $('sn-retake').hidden = true;
     $('sn-note').hidden = true;
@@ -104,8 +111,7 @@
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
       $('sn-video').srcObject = stream;
-      $('sn-video').hidden = false;
-      $('sn-shoot').hidden = false;
+      setLive(true);
       $('sn-cam').hidden = true;
       say('Stand back, point the camera at the snake, then take the photo.');
     } catch (e) {
@@ -332,6 +338,7 @@
   }
 
   $('sn-cam').addEventListener('click', startCamera);
+  $('sn-cancel').addEventListener('click', function () { reset(); say(''); });
   $('sn-shoot').addEventListener('click', async function () {
     var canvas = shoot();
     if (!canvas) return;
@@ -340,15 +347,14 @@
     }
     shot = canvas.toDataURL('image/jpeg', 0.6);
     stopCamera();
-    $('sn-video').hidden = true;
-    $('sn-shoot').hidden = true;
+    setLive(false);
     $('sn-preview').src = shot;
     $('sn-preview').hidden = false;
     $('sn-retake').hidden = false;
     $('sn-note').hidden = false;
     $('sn-send').hidden = false;
     if ($('sn-auto').checked) startAutoFix();
-    say('Add a note if you like, then send.');
+    say('Check the photo, add a note if you like, then send.');
   });
   $('sn-retake').addEventListener('click', function () { reset(); startCamera(); });
   $('sn-send').addEventListener('click', send);
