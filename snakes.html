@@ -7,6 +7,7 @@
 <meta name="description" content="Saw a snake in Kalyani? Send one live photo from where you stand. Sightings show for 48 hours; nobody sees who sent them. First aid for snakebite.">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Epilogue:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   .sn-wrap { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 40px 20px 100px; }
   .sn-wrap h1 { font-family: 'Instrument Serif', serif; font-size: 40px; color: var(--text); line-height: 1.1; }
@@ -28,10 +29,17 @@
   .sn-item p { margin-top: 6px; color: var(--text-muted); line-height: 1.5; font-size: 14px; }
   .sn-when { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-dim); letter-spacing: 0.04em; text-transform: uppercase; }
   .sn-empty { padding: 24px 0; color: var(--text-dim); font-family: 'DM Mono', monospace; font-size: 12px; }
+  .sn-map { height: 420px; margin-top: 12px; border-radius: 14px; border: 1px solid var(--border); overflow: hidden; background: var(--surface); }
+  .sn-map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.95); }
+  .sn-map .leaflet-container { background: var(--surface); font-family: 'Epilogue', sans-serif; }
+  .sn-map .leaflet-control-attribution { background: rgba(0,0,0,0.55); color: var(--text-dim); }
+  .sn-map .leaflet-control-attribution a { color: var(--text-muted); }
+  .sn-map .leaflet-popup-content-wrapper, .sn-map .leaflet-popup-tip { background: var(--surface); color: var(--text); }
+  .sn-map .leaflet-popup-content { font-size: 13px; line-height: 1.4; margin: 10px 12px; }
   .sn-first ol { margin: 0 0 0 1.2rem; color: var(--text-muted); line-height: 1.6; font-size: 14px; }
   .sn-first li { margin: 6px 0; }
   .sn-first a { color: var(--accent); }
-  @media (max-width: 600px) { .sn-wrap h1 { font-size: 32px; } .sn-item { grid-template-columns: 72px 1fr; } .sn-item img { width: 72px; height: 72px; } }
+  @media (max-width: 600px) { .sn-wrap h1 { font-size: 32px; } .sn-item { grid-template-columns: 72px 1fr; } .sn-item img { width: 72px; height: 72px; } .sn-map { height: 320px; } }
 </style>
 </head>
 <body>
@@ -76,6 +84,13 @@
     <div id="sn-list" class="sn-cards"></div>
   </section>
 
+  <section class="sn-section" aria-labelledby="sn-map-h">
+    <h2 id="sn-map-h">Map of Kalyani</h2>
+    <p class="sn-small" id="sn-map-status">Loading map…</p>
+    <div id="sn-map" class="sn-map" role="region" aria-label="Map of Kalyani with buildings and recent snake sightings"></div>
+    <p class="sn-small">Map and buildings © OpenStreetMap contributors. Pins are sightings from the last 48 hours, shown at about 100 m precision.</p>
+  </section>
+
   <section class="sn-box sn-first" id="bite" aria-labelledby="bite-h">
     <h2 id="bite-h">If someone is bitten</h2>
     <p class="sn-small">From the Health Ministry's <a href="https://clinicalestablishments.mohfw.gov.in/sites/default/files/standard-treatment-guidelines/3941.pdf" target="_blank" rel="noopener">Standard Treatment Guidelines: Snakebite</a> (June 2016), first aid by bystanders:</p>
@@ -101,6 +116,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"></script>
 <script src="/firebase-backend.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/snakes.js"></script>
 </body>
 </html>
