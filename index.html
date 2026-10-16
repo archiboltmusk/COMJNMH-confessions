@@ -73,6 +73,16 @@
       <textarea class="form-textarea" id="confess-body" name="body" rows="5" maxlength="1000" required></textarea>
     </div>
     <div class="form-group">
+      <label class="form-label" for="confess-course">Course (optional)</label>
+      <select class="form-select" id="confess-course" name="course"><option value="">Choose</option><option value="MBBS">MBBS</option><option value="DNB">DNB</option><option value="MD">MD</option><option value="MS">MS</option><option value="Bsc CCT">Bsc CCT</option><option value="Bsc PA">Bsc PA</option><option value="BHA">BHA</option><option value="MHA">MHA</option><option value="Diploma CCT">Diploma CCT</option><option value="DMLT">DMLT</option><option value="Diploma ECG">Diploma ECG</option><option value="BSc OTT">BSc OTT</option><option value="BMLT">BMLT</option><option value="Bsc PT">Bsc PT</option><option value="Bsc Nursing">Bsc Nursing</option><option value="Other">Other</option></select>
+      <input class="form-input" id="confess-course-other" name="course_other" maxlength="60" placeholder="Type your course" hidden>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="confess-batch">Batch (optional)</label>
+      <select class="form-select" id="confess-batch" name="batch"><option value="">Choose</option><option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option><option value="3rd Year">3rd Year</option><option value="4th Year">4th Year</option><option value="Intern">Intern</option><option value="House-staff/Junior Resident">House-staff/Junior Resident</option><option value="Alumni">Alumni</option><option value="PGY1">PGY1</option><option value="PGY2">PGY2</option><option value="PGY3">PGY3</option><option value="Senior Resident">Senior Resident</option><option value="Other">Other</option></select>
+      <input class="form-input" id="confess-batch-other" name="batch_other" maxlength="60" placeholder="Type your batch" hidden>
+    </div>
+    <div class="form-group">
       <button type="submit" class="btn-primary" id="confess-submit">Submit anonymously</button>
       <p id="confess-msg" role="status"></p>
     </div>
@@ -152,7 +162,13 @@ form.addEventListener('submit', async function (e) {
     const res = await fetch(SUPABASE_URL + '/functions/v1/submit-confession', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
-      body: JSON.stringify({ body: body }),
+      body: JSON.stringify({
+        body: body,
+        course: document.getElementById('confess-course').value || null,
+        course_other: document.getElementById('confess-course-other').value.trim() || null,
+        batch: document.getElementById('confess-batch').value || null,
+        batch_other: document.getElementById('confess-batch-other').value.trim() || null,
+      }),
     });
     const data = await res.json().catch(function () { return {}; });
     if (res.status === 201) {
@@ -168,6 +184,17 @@ form.addEventListener('submit', async function (e) {
     submitBtn.disabled = false;
   }
 });
+
+// Show the free-text box only when "Other" is picked. Reset it with the form.
+function bindOther(selectId, inputId) {
+  const sel = document.getElementById(selectId);
+  const input = document.getElementById(inputId);
+  const sync = function () { input.hidden = sel.value !== 'Other'; if (input.hidden) input.value = ''; };
+  sel.addEventListener('change', sync);
+  form.addEventListener('reset', function () { setTimeout(sync, 0); });
+}
+bindOther('confess-course', 'confess-course-other');
+bindOther('confess-batch', 'confess-batch-other');
 
 loadList();
 </script>
