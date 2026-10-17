@@ -112,6 +112,7 @@
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
       $('sn-video').srcObject = stream;
       setLive(true);
+      $('sn-video').play().catch(function () {});
       $('sn-cam').hidden = true;
       say('Stand back, point the camera at the snake, then take the photo.');
     } catch (e) {
