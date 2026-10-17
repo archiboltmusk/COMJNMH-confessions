@@ -25,6 +25,7 @@
   /* Camera: inline until the shutter opens, then the whole phone screen. */
   #sn-stage { display: flex; flex-direction: column; gap: 14px; }
   #sn-stage video { width: 100%; max-height: 60vh; object-fit: contain; border-radius: 10px; background: #000; }
+  .sn-wrap:has(#sn-stage.live) { z-index: auto; }
   #sn-stage.live { position: fixed; inset: 0; z-index: 2000; background: #000; gap: 0; }
   #sn-stage.live video { flex: 1; width: 100%; height: 100%; max-height: none; object-fit: cover; border-radius: 0; }
   #sn-stage.live #sn-shoot { position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%); padding: 16px 32px; font-size: 16px; }
@@ -82,7 +83,7 @@
     <label class="sn-check"><input type="checkbox" id="sn-auto" checked> Capture my location when I take the photo</label>
     <button type="button" class="sn-btn" id="sn-cam">Open camera</button>
     <div id="sn-stage">
-      <video id="sn-video" playsinline muted hidden></video>
+      <video id="sn-video" playsinline autoplay muted hidden></video>
       <button type="button" class="sn-btn" id="sn-shoot" hidden>Take photo</button>
       <button type="button" class="sn-btn ghost" id="sn-cancel" hidden>Cancel</button>
     </div>
